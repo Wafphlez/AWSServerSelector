@@ -1,4 +1,4 @@
-# 🌐 AWS Server Selector
+# 🌐 Ping by Daylight
 
 <div align="center">
 
