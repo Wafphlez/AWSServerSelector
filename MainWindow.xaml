@@ -164,15 +164,15 @@
               Foreground="{StaticResource TextBrush}"
               BorderBrush="{StaticResource BorderBrush}"
               BorderThickness="0,0,0,1">
-            <MenuItem Header="{x:Static local:LocalizationManager.Settings}" 
+            <MenuItem x:Name="SettingsMenuItem" Header="{x:Static local:LocalizationManager.Settings}" 
                       Click="Settings_Click"
                       Background="{StaticResource PrimaryBrush}"
                       Foreground="{StaticResource TextBrush}"/>
-            <MenuItem Header="{x:Static local:LocalizationManager.About}" 
+            <MenuItem x:Name="AboutMenuItem" Header="{x:Static local:LocalizationManager.About}" 
                       Click="About_Click"
                       Background="{StaticResource PrimaryBrush}"
                       Foreground="{StaticResource TextBrush}"/>
-            <MenuItem Header="{x:Static local:LocalizationManager.CheckUpdates}" 
+            <MenuItem x:Name="CheckUpdatesMenuItem" Header="{x:Static local:LocalizationManager.CheckUpdates}" 
                       Click="CheckUpdates_Click"
                       Background="{StaticResource PrimaryBrush}"
                       Foreground="{StaticResource TextBrush}"/>
@@ -214,19 +214,19 @@
                 </Grid.RowDefinitions>
                 
                 <!-- List Header -->
-                <Border Grid.Row="0" Background="{StaticResource SecondaryBrush}" Padding="15,12" CornerRadius="12,12,0,0">
+                <Border x:Name="ServerListHeader" Grid.Row="0" Background="{StaticResource SecondaryBrush}" Padding="15,12" CornerRadius="12,12,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="140"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" 
+                        <TextBlock x:Name="SelectServersText" Grid.Column="0" 
                                   Text="{x:Static local:LocalizationManager.SelectServers}" 
                                   Foreground="{StaticResource TextBrush}" 
                                   FontWeight="SemiBold"
                                   FontSize="16"/>
-                        <TextBlock Grid.Column="2" 
+                        <TextBlock x:Name="LatencyText" Grid.Column="2" 
                                   Text="{x:Static local:LocalizationManager.Latency}" 
                                   Foreground="{StaticResource TextBrush}" 
                                   FontWeight="SemiBold"
@@ -376,18 +376,25 @@
                 Padding="20,12"
                 Margin="15,0"
                 CornerRadius="8">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Text="💡 " 
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                          Text="💡 " 
                           Foreground="{StaticResource AccentBrush}" 
                           FontSize="14"
-                          VerticalAlignment="Center"/>
-                <TextBlock x:Name="StatusText" 
+                          VerticalAlignment="Top"
+                          Margin="0,0,8,0"/>
+                <TextBlock Grid.Column="1"
+                          x:Name="StatusText" 
                           Text="{x:Static local:LocalizationManager.StatusText}" 
                           Foreground="{StaticResource SubTextBrush}" 
                           FontSize="13"
                           TextWrapping="Wrap"
-                          VerticalAlignment="Center"/>
-            </StackPanel>
+                          VerticalAlignment="Top"/>
+            </Grid>
         </Border>
         
         <!-- Action Buttons -->

@@ -20,7 +20,7 @@ namespace AWSServerSelector
 
         public string SettingsTitle => LocalizationManager.GetString("Settings");
 
-        private string _selectedLanguage = "en";
+        private string _selectedLanguage = "en"; // Default to English
         public string SelectedLanguage
         {
             get => _selectedLanguage;
@@ -74,6 +74,9 @@ namespace AWSServerSelector
             new ModeItem { Code = "service", Name = "Service" }
         };
 
+        public string LanguageText => LocalizationManager.GetString("Language");
+        public string MethodText => LocalizationManager.GetString("Method");
+        public string GatekeepOptionsText => LocalizationManager.GetString("GatekeepOptions");
         public string BlockBothText => LocalizationManager.GetString("BlockBoth");
         public string BlockPingText => LocalizationManager.GetString("BlockPing");
         public string BlockServiceText => LocalizationManager.GetString("BlockService");
@@ -93,6 +96,9 @@ namespace AWSServerSelector
         private void OnLanguageChanged(object? sender, EventArgs e)
         {
             // Update localized strings
+            OnPropertyChanged(nameof(LanguageText));
+            OnPropertyChanged(nameof(MethodText));
+            OnPropertyChanged(nameof(GatekeepOptionsText));
             OnPropertyChanged(nameof(BlockBothText));
             OnPropertyChanged(nameof(BlockPingText));
             OnPropertyChanged(nameof(BlockServiceText));

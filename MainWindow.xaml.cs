@@ -82,8 +82,8 @@ namespace AWSServerSelector
         private static string SettingsFilePath =>
             Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "Tigerbyte",
-                "MakeYourChoice",
+                "Wafphlez",
+                "PingByDaylight",
                 "settings.json");
 
         // Hosts file section marker and path
@@ -113,6 +113,11 @@ namespace AWSServerSelector
             InitializeComponent();
             DataContext = this;
             LoadSettings();
+            
+            // Force update UI after loading settings to ensure proper language display
+            UpdateUI();
+            UpdateStaticBindingElements();
+            
             InitializeApplication();
             
             // Subscribe to language change events
@@ -127,6 +132,9 @@ namespace AWSServerSelector
             
             UpdateRegionListViewAppearance();
             UpdateUI();
+            
+            // Final UI update to ensure all static bindings are properly updated
+            UpdateStaticBindingElements();
         }
 
         private void InitializeServerList()
@@ -207,9 +215,19 @@ namespace AWSServerSelector
             {
                 var folder = Path.GetDirectoryName(SettingsFilePath);
                 if (!Directory.Exists(folder))
+                {
+                    // Set default language to English if no settings folder exists
+                    _currentLanguage = "en";
+                    LocalizationManager.SetLanguage(_currentLanguage);
                     return;
+                }
                 if (!File.Exists(SettingsFilePath))
+                {
+                    // Set default language to English if no settings file exists
+                    _currentLanguage = "en";
+                    LocalizationManager.SetLanguage(_currentLanguage);
                     return;
+                }
                 var json = File.ReadAllText(SettingsFilePath);
                 var settings = JsonSerializer.Deserialize<UserSettings>(json);
                 if (settings != null)
@@ -219,11 +237,26 @@ namespace AWSServerSelector
                     _mergeUnstable = settings.MergeUnstable;
                     _currentLanguage = settings.Language;
                     LocalizationManager.SetLanguage(_currentLanguage);
+                    
+                    // Force UI update after loading saved language
+                    System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        UpdateUI();
+                        UpdateStaticBindingElements();
+                    }), System.Windows.Threading.DispatcherPriority.Loaded);
+                }
+                else
+                {
+                    // Set default language to English if settings are null
+                    _currentLanguage = "en";
+                    LocalizationManager.SetLanguage(_currentLanguage);
                 }
             }
             catch
             {
-                // ignore load errors
+                // Set default language to English on any error
+                _currentLanguage = "en";
+                LocalizationManager.SetLanguage(_currentLanguage);
             }
         }
 
@@ -827,6 +860,92 @@ namespace AWSServerSelector
             
             // Force refresh of all XAML elements that use static bindings
             this.InvalidateVisual();
+            
+            // Force update of specific XAML elements that use static bindings
+            UpdateStaticBindingElements();
+        }
+        
+        private void UpdateStaticBindingElements()
+        {
+            // Find and update elements that use static bindings
+            var selectServersText = this.FindName("SelectServersText") as System.Windows.Controls.TextBlock;
+            if (selectServersText == null)
+            {
+                // Try to find the TextBlock in the header
+                var headerBorder = this.FindName("ServerListHeader") as Border;
+                if (headerBorder != null)
+                {
+                    var grid = headerBorder.Child as Grid;
+                    if (grid != null && grid.Children.Count > 0)
+                    {
+                        selectServersText = grid.Children[0] as System.Windows.Controls.TextBlock;
+                    }
+                }
+            }
+            
+            if (selectServersText != null)
+            {
+                selectServersText.Text = LocalizationManager.GetString("SelectServers");
+            }
+            
+            // Update latency text
+            var latencyText = this.FindName("LatencyText") as System.Windows.Controls.TextBlock;
+            if (latencyText == null)
+            {
+                // Try to find the TextBlock in the header
+                var headerBorder = this.FindName("ServerListHeader") as Border;
+                if (headerBorder != null)
+                {
+                    var grid = headerBorder.Child as Grid;
+                    if (grid != null && grid.Children.Count > 2)
+                    {
+                        latencyText = grid.Children[2] as System.Windows.Controls.TextBlock;
+                    }
+                }
+            }
+            
+            if (latencyText != null)
+            {
+                latencyText.Text = LocalizationManager.GetString("Latency");
+            }
+            
+            // Update menu items
+            var settingsMenuItem = this.FindName("SettingsMenuItem") as MenuItem;
+            if (settingsMenuItem != null)
+            {
+                settingsMenuItem.Header = LocalizationManager.GetString("Settings");
+            }
+            
+            var aboutMenuItem = this.FindName("AboutMenuItem") as MenuItem;
+            if (aboutMenuItem != null)
+            {
+                aboutMenuItem.Header = LocalizationManager.GetString("About");
+            }
+            
+            var checkUpdatesMenuItem = this.FindName("CheckUpdatesMenuItem") as MenuItem;
+            if (checkUpdatesMenuItem != null)
+            {
+                checkUpdatesMenuItem.Header = LocalizationManager.GetString("CheckUpdates");
+            }
+            
+            // Update buttons
+            var openHostsButton = this.FindName("OpenHostsButton") as Button;
+            if (openHostsButton != null)
+            {
+                openHostsButton.Content = LocalizationManager.GetString("OpenHosts");
+            }
+            
+            var revertButton = this.FindName("RevertButton") as Button;
+            if (revertButton != null)
+            {
+                revertButton.Content = LocalizationManager.GetString("ResetToDefault");
+            }
+            
+            var applyButton = this.FindName("ApplyButton") as Button;
+            if (applyButton != null)
+            {
+                applyButton.Content = LocalizationManager.GetString("ApplySelection");
+            }
         }
 
         private void UpdateServerNames()

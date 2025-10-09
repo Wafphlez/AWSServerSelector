@@ -106,7 +106,7 @@ namespace PingByDaylight.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to 🚀 Apply Selection.
+        ///   Looks up a localized string similar to 🚀 Apply.
         /// </summary>
         internal static string ApplySelection {
             get {
@@ -349,7 +349,7 @@ namespace PingByDaylight.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Gatekeep Options.
+        ///   Looks up a localized string similar to 🛡️ Gatekeep Options.
         /// </summary>
         internal static string GatekeepOptions {
             get {
@@ -358,7 +358,7 @@ namespace PingByDaylight.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Language.
+        ///   Looks up a localized string similar to 🌐 Language.
         /// </summary>
         internal static string Language {
             get {
@@ -385,7 +385,7 @@ namespace PingByDaylight.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Method.
+        ///   Looks up a localized string similar to 🔧 Method.
         /// </summary>
         internal static string Method {
             get {
