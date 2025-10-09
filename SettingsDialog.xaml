@@ -90,10 +90,13 @@
                                 <Setter TargetName="DropDownBorder" Property="Background" Value="#FF2A2A2A"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="BorderBrush" Value="#FFE74C3C"/>
+                                <Setter TargetName="ToggleButton" Property="Background" Value="#FFed365b"/>
+                                <Setter TargetName="ToggleButton" Property="BorderBrush" Value="#FFed365b"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Foreground" Value="#808080"/>
+                                <Setter TargetName="ToggleButton" Property="Background" Value="#FF1A1A1A"/>
+                                <Setter TargetName="ToggleButton" Property="BorderBrush" Value="#FF303030"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -118,7 +121,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FFE74C3C"/>
+                                <Setter Property="Background" Value="#FFed365b"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Setter Property="Background" Value="#FFDC143C"/>
@@ -150,8 +153,8 @@
         </Style>
         
         <!-- Modern Button Style -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="#DC143C"/>
+         <Style x:Key="ModernButton" TargetType="Button">
+             <Setter Property="Background" Value="#FFDC143C"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="20,12"/>
@@ -166,14 +169,14 @@
                             <ContentPresenter HorizontalAlignment="Center"
                                             VerticalAlignment="Center"/>
                         </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource SecondaryBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#B71C1C"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
+                         <ControlTemplate.Triggers>
+                             <Trigger Property="IsMouseOver" Value="True">
+                                 <Setter Property="Background" Value="#FFed365b"/>
+                             </Trigger>
+                             <Trigger Property="IsPressed" Value="True">
+                                 <Setter Property="Background" Value="#FFDC143C"/>
+                             </Trigger>
+                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>

@@ -17,7 +17,7 @@
         <SolidColorBrush x:Key="PrimaryBrush" Color="#FF1A1A1A"/>
         <SolidColorBrush x:Key="SecondaryBrush" Color="#FF2A2A2A"/>
         <SolidColorBrush x:Key="AccentBrush" Color="#FFDC143C"/>
-        <SolidColorBrush x:Key="AccentBrushHover" Color="#FFE74C3C"/>
+        <SolidColorBrush x:Key="AccentBrushHover" Color="#FFed365b"/>
         <SolidColorBrush x:Key="TextBrush" Color="#FFFFFFFF"/>
         <SolidColorBrush x:Key="SubTextBrush" Color="#FFB0B0B0"/>
         <SolidColorBrush x:Key="SuccessBrush" Color="#FF28A745"/>
@@ -46,10 +46,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FFE74C3C"/>
+                                <Setter Property="Background" Value="#FFed365b"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#FFB71C1C"/>
+                                <Setter Property="Background" Value="#FFed365b"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
