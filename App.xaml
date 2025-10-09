@@ -4,6 +4,208 @@
              xmlns:local="clr-namespace:AWSServerSelector"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <!-- Title Bar Button Styles -->
+        <Style x:Key="TitleBarButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="35"/>
+            <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FF2A2A2A"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FF3A3A3A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <Style x:Key="TitleBarCloseButtonStyle" TargetType="Button" BasedOn="{StaticResource TitleBarButtonStyle}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FFDC143C"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#FFed365b"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Custom Window Style with Black Title Bar (Close Button Only) -->
+        <Style x:Key="CustomWindowStyle" TargetType="Window">
+            <Setter Property="WindowChrome.WindowChrome">
+                <Setter.Value>
+                    <WindowChrome CaptionHeight="35"
+                                 ResizeBorderThickness="5"
+                                 GlassFrameThickness="0"
+                                 CornerRadius="0"
+                                 UseAeroCaptionButtons="False"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Window">
+                        <Border Background="{TemplateBinding Background}" 
+                               BorderBrush="#FF1A1A1A" 
+                               BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="35"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Custom Title Bar -->
+                                <Border Grid.Row="0" Background="#FF0A0A0A" BorderBrush="#FF2A2A2A" BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Window Icon and Title -->
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
+                                            <Image Source="{TemplateBinding Icon}" 
+                                                  Width="16" 
+                                                  Height="16" 
+                                                  Margin="0,0,8,0"
+                                                  RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Text="{TemplateBinding Title}" 
+                                                      Foreground="#FFFFFFFF" 
+                                                      FontSize="12"
+                                                      FontWeight="Normal"
+                                                      VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Window Buttons (Close Only) -->
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <!-- Close Button -->
+                                            <Button x:Name="CloseButton"
+                                                   Content="✕"
+                                                   FontSize="12"
+                                                   Style="{StaticResource TitleBarCloseButtonStyle}"
+                                                   Command="{x:Static SystemCommands.CloseWindowCommand}"
+                                                   CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                
+                                <!-- Window Content -->
+                                <AdornerDecorator Grid.Row="1">
+                                    <ContentPresenter/>
+                                </AdornerDecorator>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
+        <!-- Custom Main Window Style with Black Title Bar (All Buttons) -->
+        <Style x:Key="CustomMainWindowStyle" TargetType="Window">
+            <Setter Property="WindowChrome.WindowChrome">
+                <Setter.Value>
+                    <WindowChrome CaptionHeight="35"
+                                 ResizeBorderThickness="5"
+                                 GlassFrameThickness="0"
+                                 CornerRadius="0"
+                                 UseAeroCaptionButtons="False"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Window">
+                        <Border Background="{TemplateBinding Background}" 
+                               BorderBrush="#FF1A1A1A" 
+                               BorderThickness="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="35"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                
+                                <!-- Custom Title Bar -->
+                                <Border Grid.Row="0" Background="#FF0A0A0A" BorderBrush="#FF2A2A2A" BorderThickness="0,0,0,1">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Window Icon and Title -->
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0,0,0" VerticalAlignment="Center">
+                                            <Image Source="{TemplateBinding Icon}" 
+                                                  Width="16" 
+                                                  Height="16" 
+                                                  Margin="0,0,8,0"
+                                                  RenderOptions.BitmapScalingMode="HighQuality"/>
+                                            <TextBlock Text="{TemplateBinding Title}" 
+                                                      Foreground="#FFFFFFFF" 
+                                                      FontSize="12"
+                                                      FontWeight="Normal"
+                                                      VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        
+                                        <!-- Window Buttons -->
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                            <!-- Minimize Button -->
+                                            <Button x:Name="MinimizeButton"
+                                                   Content="─"
+                                                   FontSize="12"
+                                                   Style="{StaticResource TitleBarButtonStyle}"
+                                                   Command="{x:Static SystemCommands.MinimizeWindowCommand}"
+                                                   CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                            
+                                            <!-- Maximize/Restore Button -->
+                                            <Button x:Name="MaximizeRestoreButton"
+                                                   Content="☐"
+                                                   FontSize="12"
+                                                   Style="{StaticResource TitleBarButtonStyle}"
+                                                   Click="MaximizeRestoreButton_Click"/>
+                                            
+                                            <!-- Close Button -->
+                                            <Button x:Name="CloseButton"
+                                                   Content="✕"
+                                                   FontSize="12"
+                                                   Style="{StaticResource TitleBarCloseButtonStyle}"
+                                                   Command="{x:Static SystemCommands.CloseWindowCommand}"
+                                                   CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=Window}}"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                                
+                                <!-- Window Content -->
+                                <AdornerDecorator Grid.Row="1">
+                                    <ContentPresenter/>
+                                </AdornerDecorator>
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        
         <!-- Global TextBlock Style for All TextBlocks -->
         <Style TargetType="TextBlock">
             <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
