@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppTitle" xml:space="preserve">
+    <value>AWS Server Selector</value>
+  </data>
+  <data name="SelectServers" xml:space="preserve">
+    <value>🌐 Select AWS Servers</value>
+  </data>
+  <data name="Latency" xml:space="preserve">
+    <value>⚡ Latency</value>
+  </data>
+  <data name="StatusText" xml:space="preserve">
+    <value>Select multiple AWS servers. The system will choose the best one based on latency.</value>
+  </data>
+  <data name="OpenHosts" xml:space="preserve">
+    <value>📝 Open Hosts</value>
+  </data>
+  <data name="ResetToDefault" xml:space="preserve">
+    <value>🔄 Reset to Default</value>
+  </data>
+  <data name="ApplySelection" xml:space="preserve">
+    <value>🚀 Apply Selection</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Repository" xml:space="preserve">
+    <value>Repository</value>
+  </data>
+  <data name="Website" xml:space="preserve">
+    <value>Website</value>
+  </data>
+  <data name="DiscordSupport" xml:space="preserve">
+    <value>Discord Support</value>
+  </data>
+  <data name="OpenHostsLocation" xml:space="preserve">
+    <value>Open Hosts File Location</value>
+  </data>
+  <data name="ResetHosts" xml:space="preserve">
+    <value>Reset Hosts File</value>
+  </data>
+  <data name="About" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="English" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Russian" xml:space="preserve">
+    <value>Русский</value>
+  </data>
+  <data name="Method" xml:space="preserve">
+    <value>Method</value>
+  </data>
+  <data name="GatekeepDefault" xml:space="preserve">
+    <value>Gatekeep (default)</value>
+  </data>
+  <data name="UniversalRedirect" xml:space="preserve">
+    <value>Universal Redirect</value>
+  </data>
+  <data name="GatekeepOptions" xml:space="preserve">
+    <value>Gatekeep Options</value>
+  </data>
+  <data name="BlockBoth" xml:space="preserve">
+    <value>Block both (default)</value>
+  </data>
+  <data name="BlockPing" xml:space="preserve">
+    <value>Block UDP ping beacon endpoints</value>
+  </data>
+  <data name="BlockService" xml:space="preserve">
+    <value>Block service endpoints</value>
+  </data>
+  <data name="MergeUnstable" xml:space="preserve">
+    <value>Merge unstable servers (recommended)</value>
+  </data>
+  <data name="ApplyChanges" xml:space="preserve">
+    <value>Apply Changes</value>
+  </data>
+  <data name="DefaultOptions" xml:space="preserve">
+    <value>Default Options</value>
+  </data>
+  <data name="Awesome" xml:space="preserve">
+    <value>Awesome!</value>
+  </data>
+  <data name="AboutTitle" xml:space="preserve">
+    <value>About AWS Realms</value>
+  </data>
+  <data name="AboutText" xml:space="preserve">
+    <value>AWS Realms - AWS Server Selector</value>
+  </data>
+  <data name="Developer" xml:space="preserve">
+    <value>Developer: Ky</value>
+  </data>
+  <data name="Version" xml:space="preserve">
+    <value>Version {0}\nModern WPF interface with AWS server selection\nWindows 10 or higher recommended.</value>
+  </data>
+  <data name="SelectAll" xml:space="preserve">
+    <value>Select All</value>
+  </data>
+  <data name="Europe" xml:space="preserve">
+    <value>Europe</value>
+  </data>
+  <data name="Americas" xml:space="preserve">
+    <value>The Americas</value>
+  </data>
+  <data name="Asia" xml:space="preserve">
+    <value>Asia (excluding Mainland China)</value>
+  </data>
+  <data name="Oceania" xml:space="preserve">
+    <value>Oceania</value>
+  </data>
+  <data name="China" xml:space="preserve">
+    <value>Mainland China</value>
+  </data>
+  <data name="Europe_London" xml:space="preserve">
+    <value>Europe (London)</value>
+  </data>
+  <data name="Europe_Ireland" xml:space="preserve">
+    <value>Europe (Ireland)</value>
+  </data>
+  <data name="Europe_Frankfurt" xml:space="preserve">
+    <value>Europe (Frankfurt am Main)</value>
+  </data>
+  <data name="US_East_Virginia" xml:space="preserve">
+    <value>US East (N. Virginia)</value>
+  </data>
+  <data name="US_East_Ohio" xml:space="preserve">
+    <value>US East (Ohio)</value>
+  </data>
+  <data name="US_West_California" xml:space="preserve">
+    <value>US West (N. California)</value>
+  </data>
+  <data name="US_West_Oregon" xml:space="preserve">
+    <value>US West (Oregon)</value>
+  </data>
+  <data name="Canada_Central" xml:space="preserve">
+    <value>Canada (Central)</value>
+  </data>
+  <data name="South_America_Sao_Paulo" xml:space="preserve">
+    <value>South America (São Paulo)</value>
+  </data>
+  <data name="Asia_Tokyo" xml:space="preserve">
+    <value>Asia Pacific (Tokyo)</value>
+  </data>
+  <data name="Asia_Seoul" xml:space="preserve">
+    <value>Asia Pacific (Seoul)</value>
+  </data>
+  <data name="Asia_Mumbai" xml:space="preserve">
+    <value>Asia Pacific (Mumbai)</value>
+  </data>
+  <data name="Asia_Singapore" xml:space="preserve">
+    <value>Asia Pacific (Singapore)</value>
+  </data>
+  <data name="Asia_Hong_Kong" xml:space="preserve">
+    <value>Asia Pacific (Hong Kong)</value>
+  </data>
+  <data name="Asia_Sydney" xml:space="preserve">
+    <value>Asia Pacific (Sydney)</value>
+  </data>
+  <data name="China_Beijing" xml:space="preserve">
+    <value>China (Beijing)</value>
+  </data>
+  <data name="China_Ningxia" xml:space="preserve">
+    <value>China (Ningxia)</value>
+  </data>
+  <data name="CheckUpdates" xml:space="preserve">
+    <value>Check for Updates</value>
+  </data>
+</root>

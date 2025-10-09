@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppTitle" xml:space="preserve">
+    <value>Селектор AWS Серверов</value>
+  </data>
+  <data name="SelectServers" xml:space="preserve">
+    <value>🌐 Выберите AWS Серверы</value>
+  </data>
+  <data name="Latency" xml:space="preserve">
+    <value>⚡ Задержка</value>
+  </data>
+  <data name="StatusText" xml:space="preserve">
+    <value>Выберите несколько AWS серверов. Система выберет лучший на основе задержки.</value>
+  </data>
+  <data name="OpenHosts" xml:space="preserve">
+    <value>📝 Открыть Hosts</value>
+  </data>
+  <data name="ResetToDefault" xml:space="preserve">
+    <value>🔄 Сбросить по умолчанию</value>
+  </data>
+  <data name="ApplySelection" xml:space="preserve">
+    <value>🚀 Применить выбор</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Настройки</value>
+  </data>
+  <data name="Repository" xml:space="preserve">
+    <value>Репозиторий</value>
+  </data>
+  <data name="Website" xml:space="preserve">
+    <value>Веб-сайт</value>
+  </data>
+  <data name="DiscordSupport" xml:space="preserve">
+    <value>Поддержка Discord</value>
+  </data>
+  <data name="OpenHostsLocation" xml:space="preserve">
+    <value>Открыть расположение файла Hosts</value>
+  </data>
+  <data name="ResetHosts" xml:space="preserve">
+    <value>Сбросить файл Hosts</value>
+  </data>
+  <data name="About" xml:space="preserve">
+    <value>О программе</value>
+  </data>
+  <data name="Language" xml:space="preserve">
+    <value>Язык</value>
+  </data>
+  <data name="English" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Russian" xml:space="preserve">
+    <value>Русский</value>
+  </data>
+  <data name="Method" xml:space="preserve">
+    <value>Метод</value>
+  </data>
+  <data name="GatekeepDefault" xml:space="preserve">
+    <value>Блокировка (по умолчанию)</value>
+  </data>
+  <data name="UniversalRedirect" xml:space="preserve">
+    <value>Универсальное перенаправление</value>
+  </data>
+  <data name="GatekeepOptions" xml:space="preserve">
+    <value>Опции блокировки</value>
+  </data>
+  <data name="BlockBoth" xml:space="preserve">
+    <value>Блокировать оба (по умолчанию)</value>
+  </data>
+  <data name="BlockPing" xml:space="preserve">
+    <value>Блокировать UDP ping маяки</value>
+  </data>
+  <data name="BlockService" xml:space="preserve">
+    <value>Блокировать сервисные эндпоинты</value>
+  </data>
+  <data name="MergeUnstable" xml:space="preserve">
+    <value>Объединить нестабильные серверы (рекомендуется)</value>
+  </data>
+  <data name="ApplyChanges" xml:space="preserve">
+    <value>Применить изменения</value>
+  </data>
+  <data name="DefaultOptions" xml:space="preserve">
+    <value>Параметры по умолчанию</value>
+  </data>
+  <data name="Awesome" xml:space="preserve">
+    <value>Отлично!</value>
+  </data>
+  <data name="AboutTitle" xml:space="preserve">
+    <value>О AWS Realms</value>
+  </data>
+  <data name="AboutText" xml:space="preserve">
+    <value>AWS Realms - Селектор AWS Серверов</value>
+  </data>
+  <data name="Developer" xml:space="preserve">
+    <value>Разработчик: Ky</value>
+  </data>
+  <data name="Version" xml:space="preserve">
+    <value>Версия {0}\nСовременный WPF интерфейс с выбором AWS серверов\nРекомендуется Windows 10 или выше.</value>
+  </data>
+  <data name="SelectAll" xml:space="preserve">
+    <value>Выбрать все</value>
+  </data>
+  <data name="Europe" xml:space="preserve">
+    <value>Европа</value>
+  </data>
+  <data name="Americas" xml:space="preserve">
+    <value>Америка</value>
+  </data>
+  <data name="Asia" xml:space="preserve">
+    <value>Азия (кроме материкового Китая)</value>
+  </data>
+  <data name="Oceania" xml:space="preserve">
+    <value>Океания</value>
+  </data>
+  <data name="China" xml:space="preserve">
+    <value>Материковый Китай</value>
+  </data>
+  <data name="Europe_London" xml:space="preserve">
+    <value>Европа (Лондон)</value>
+  </data>
+  <data name="Europe_Ireland" xml:space="preserve">
+    <value>Европа (Ирландия)</value>
+  </data>
+  <data name="Europe_Frankfurt" xml:space="preserve">
+    <value>Европа (Франкфурт-на-Майне)</value>
+  </data>
+  <data name="US_East_Virginia" xml:space="preserve">
+    <value>США Восток (Вирджиния)</value>
+  </data>
+  <data name="US_East_Ohio" xml:space="preserve">
+    <value>США Восток (Огайо)</value>
+  </data>
+  <data name="US_West_California" xml:space="preserve">
+    <value>США Запад (Калифорния)</value>
+  </data>
+  <data name="US_West_Oregon" xml:space="preserve">
+    <value>США Запад (Орегон)</value>
+  </data>
+  <data name="Canada_Central" xml:space="preserve">
+    <value>Канада (Центральная)</value>
+  </data>
+  <data name="South_America_Sao_Paulo" xml:space="preserve">
+    <value>Южная Америка (Сан-Паулу)</value>
+  </data>
+  <data name="Asia_Tokyo" xml:space="preserve">
+    <value>Азия (Токио)</value>
+  </data>
+  <data name="Asia_Seoul" xml:space="preserve">
+    <value>Азия (Сеул)</value>
+  </data>
+  <data name="Asia_Mumbai" xml:space="preserve">
+    <value>Азия (Мумбаи)</value>
+  </data>
+  <data name="Asia_Singapore" xml:space="preserve">
+    <value>Азия (Сингапур)</value>
+  </data>
+  <data name="Asia_Hong_Kong" xml:space="preserve">
+    <value>Азия (Гонконг)</value>
+  </data>
+  <data name="Asia_Sydney" xml:space="preserve">
+    <value>Азия (Сидней)</value>
+  </data>
+  <data name="China_Beijing" xml:space="preserve">
+    <value>Китай (Пекин)</value>
+  </data>
+  <data name="China_Ningxia" xml:space="preserve">
+    <value>Китай (Нинся)</value>
+  </data>
+  <data name="CheckUpdates" xml:space="preserve">
+    <value>Проверить обновления</value>
+  </data>
+</root>

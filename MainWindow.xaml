@@ -5,26 +5,26 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AWSServerSelector"
         mc:Ignorable="d"
-        Title="AWS Server Selector" 
+        Title="{x:Static local:LocalizationManager.AppTitle}" 
         Height="750" Width="500"
         MinHeight="750" MinWidth="500"
         WindowStartupLocation="CenterScreen"
-        Background="#FF0D1117"
+        Background="#FF0A0A0A"
         FontFamily="Segoe UI Variable">
     
     <Window.Resources>
-        <!-- Modern AWS-Inspired Dark Theme -->
-        <SolidColorBrush x:Key="PrimaryBrush" Color="#FF161B22"/>
-        <SolidColorBrush x:Key="SecondaryBrush" Color="#FF21262D"/>
-        <SolidColorBrush x:Key="AccentBrush" Color="#FFFF9500"/>
-        <SolidColorBrush x:Key="AccentBrushHover" Color="#FFFFB84D"/>
+        <!-- Dead by Daylight Inspired Dark Theme -->
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#FF1A1A1A"/>
+        <SolidColorBrush x:Key="SecondaryBrush" Color="#FF2A2A2A"/>
+        <SolidColorBrush x:Key="AccentBrush" Color="#FFDC143C"/>
+        <SolidColorBrush x:Key="AccentBrushHover" Color="#FFE74C3C"/>
         <SolidColorBrush x:Key="TextBrush" Color="#FFFFFFFF"/>
-        <SolidColorBrush x:Key="SubTextBrush" Color="#FF8B949E"/>
-        <SolidColorBrush x:Key="SuccessBrush" Color="#FF3FB950"/>
-        <SolidColorBrush x:Key="WarningBrush" Color="#FFD29922"/>
-        <SolidColorBrush x:Key="ErrorBrush" Color="#FFF85149"/>
-        <SolidColorBrush x:Key="BorderBrush" Color="#FF30363D"/>
-        <SolidColorBrush x:Key="CardBrush" Color="#FF0D1117"/>
+        <SolidColorBrush x:Key="SubTextBrush" Color="#FFB0B0B0"/>
+        <SolidColorBrush x:Key="SuccessBrush" Color="#FF28A745"/>
+        <SolidColorBrush x:Key="WarningBrush" Color="#FFFFC107"/>
+        <SolidColorBrush x:Key="ErrorBrush" Color="#FFDC143C"/>
+        <SolidColorBrush x:Key="BorderBrush" Color="#FF404040"/>
+        <SolidColorBrush x:Key="CardBrush" Color="#FF0A0A0A"/>
         
         <!-- Modern Button Styles -->
         <Style x:Key="ModernButton" TargetType="Button">
@@ -46,10 +46,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FFB84D"/>
+                                <Setter Property="Background" Value="#FFE74C3C"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#FFA500"/>
+                                <Setter Property="Background" Value="#FFB71C1C"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -73,10 +73,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#FF2D3339"/>
+                                <Setter Property="Background" Value="#FF3A3A3A"/>
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#FF1C2128"/>
+                                <Setter Property="Background" Value="#FF1A1A1A"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -111,14 +111,23 @@
                                   Stroke="{StaticResource AccentBrush}"
                                   StrokeThickness="2"
                                   Visibility="Collapsed"/>
+                            <Path x:Name="IndeterminateMark"
+                                  Data="M 4,9 L 14,9"
+                                  Stroke="{StaticResource AccentBrush}"
+                                  StrokeThickness="2"
+                                  Visibility="Collapsed"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
                                 <Setter TargetName="Border" Property="Background" Value="{StaticResource AccentBrush}"/>
                             </Trigger>
+                            <Trigger Property="IsChecked" Value="{x:Null}">
+                                <Setter TargetName="IndeterminateMark" Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource AccentBrush}"/>
+                            </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#FFB84D"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource SecondaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -141,11 +150,32 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+        
+        <!-- Menu Bar -->
+        <Menu Grid.Row="0" 
+              Background="{StaticResource PrimaryBrush}" 
+              Foreground="{StaticResource TextBrush}"
+              BorderBrush="{StaticResource BorderBrush}"
+              BorderThickness="0,0,0,1">
+            <MenuItem Header="{x:Static local:LocalizationManager.Settings}" 
+                      Click="Settings_Click"
+                      Background="{StaticResource PrimaryBrush}"
+                      Foreground="{StaticResource TextBrush}"/>
+            <MenuItem Header="{x:Static local:LocalizationManager.About}" 
+                      Click="About_Click"
+                      Background="{StaticResource PrimaryBrush}"
+                      Foreground="{StaticResource TextBrush}"/>
+            <MenuItem Header="{x:Static local:LocalizationManager.CheckUpdates}" 
+                      Click="CheckUpdates_Click"
+                      Background="{StaticResource PrimaryBrush}"
+                      Foreground="{StaticResource TextBrush}"/>
+        </Menu>
         
         <!-- Header -->
         <!-- <Border Grid.Row="0" Background="{StaticResource AccentBrush}" Padding="25,20">
@@ -167,7 +197,7 @@
         </Border>-->
         
         <!-- Server List -->
-        <Border Grid.Row="1" 
+        <Border Grid.Row="2" 
                 Background="{StaticResource CardBrush}" 
                 BorderBrush="{StaticResource BorderBrush}" 
                 BorderThickness="1" 
@@ -191,12 +221,12 @@
                             <ColumnDefinition Width="140"/>
                         </Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" 
-                                  Text="🌐 Select AWS Servers" 
+                                  Text="{x:Static local:LocalizationManager.SelectServers}" 
                                   Foreground="{StaticResource TextBrush}" 
                                   FontWeight="SemiBold"
                                   FontSize="16"/>
                         <TextBlock Grid.Column="2" 
-                                  Text="⚡ Latency" 
+                                  Text="{x:Static local:LocalizationManager.Latency}" 
                                   Foreground="{StaticResource TextBrush}" 
                                   FontWeight="SemiBold"
                                   FontSize="16"
@@ -242,17 +272,17 @@
                                         </Border>
                                         <ControlTemplate.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter TargetName="ItemBorder" Property="Background" Value="#FF2D3339"/>
+                                                <Setter TargetName="ItemBorder" Property="Background" Value="#FF3A3A3A"/>
                                             </Trigger>
                                             <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="ItemBorder" Property="Background" Value="#FF1C2128"/>
+                                                <Setter TargetName="ItemBorder" Property="Background" Value="#FF2A2A2A"/>
                                             </Trigger>
                                             <MultiTrigger>
                                                 <MultiTrigger.Conditions>
                                                     <Condition Property="IsSelected" Value="True"/>
                                                     <Condition Property="IsMouseOver" Value="True"/>
                                                 </MultiTrigger.Conditions>
-                                                <Setter TargetName="ItemBorder" Property="Background" Value="#FF30363D"/>
+                                                <Setter TargetName="ItemBorder" Property="Background" Value="#FF404040"/>
                                             </MultiTrigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -271,10 +301,23 @@
                                            CornerRadius="6" 
                                            Padding="12,8"
                                            Margin="0,0,0,4">
-                                        <TextBlock Text="{Binding GroupName}" 
-                                                  Foreground="{StaticResource TextBrush}"
-                                                  FontWeight="SemiBold"
-                                                  FontSize="14"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <CheckBox Grid.Column="0" 
+                                                     IsChecked="{Binding IsAllSelected}" 
+                                                     Margin="0,0,12,0"
+                                                     VerticalAlignment="Center"
+                                                     Style="{StaticResource ModernCheckBox}"/>
+                                            <TextBlock Grid.Column="1" 
+                                                      Text="{Binding GroupName}" 
+                                                      Foreground="{StaticResource TextBrush}"
+                                                      FontWeight="SemiBold"
+                                                      FontSize="14"
+                                                      VerticalAlignment="Center"/>
+                                        </Grid>
                                     </Border>
                                 </Expander.Header>
                                 <Expander.Content>
@@ -327,7 +370,7 @@
         </Border>
         
         <!-- Status Bar -->
-        <Border Grid.Row="2" 
+        <Border Grid.Row="3" 
                 Background="{StaticResource SecondaryBrush}" 
                 Padding="20,12"
                 Margin="15,0"
@@ -338,7 +381,7 @@
                           FontSize="14"
                           VerticalAlignment="Center"/>
                 <TextBlock x:Name="StatusText" 
-                          Text="Select multiple AWS servers. The system will choose the best one based on latency." 
+                          Text="{x:Static local:LocalizationManager.StatusText}" 
                           Foreground="{StaticResource SubTextBrush}" 
                           FontSize="13"
                           TextWrapping="Wrap"
@@ -347,7 +390,7 @@
         </Border>
         
         <!-- Action Buttons -->
-        <Border Grid.Row="3" 
+        <Border Grid.Row="4" 
                 Background="{StaticResource CardBrush}" 
                 Padding="0,20,20,0"
                 Margin="15,0,15,0"
@@ -357,14 +400,14 @@
             </Border.Effect>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="OpenHostsButton" 
-                       Content="📝 Open Hosts" 
+                       Content="{x:Static local:LocalizationManager.OpenHosts}" 
                        Style="{StaticResource SecondaryButton}"
                        Margin="0,0,0,0"
                        Click="OpenHostsButton_Click"/>
             </StackPanel>
         </Border>
         
-        <Border Grid.Row="4" 
+        <Border Grid.Row="5" 
                 Background="{StaticResource CardBrush}" 
                 Padding="20,15"
                 Margin="15,0,15,0"
@@ -374,32 +417,15 @@
             </Border.Effect>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="RevertButton" 
-                       Content="🔄 Reset to Default" 
+                       Content="{x:Static local:LocalizationManager.ResetToDefault}" 
                        Style="{StaticResource SecondaryButton}"
                        Margin="0,0,15,0"
                        Click="RevertButton_Click"/>
             <Button x:Name="ApplyButton" 
-                   Content="🚀 Apply Selection" 
+                   Content="{x:Static local:LocalizationManager.ApplySelection}" 
                    Style="{StaticResource ModernButton}"
                    Click="ApplyButton_Click"/>
             </StackPanel>
         </Border>
     </Grid>
-    
-    <!-- Menu -->
-    <Window.ContextMenu>
-        <ContextMenu Background="{StaticResource PrimaryBrush}" 
-                    BorderBrush="{StaticResource SecondaryBrush}">
-            <MenuItem Header="Settings" Click="Settings_Click"/>
-            <Separator/>
-            <MenuItem Header="Repository" Click="Repository_Click"/>
-            <MenuItem Header="Website" Click="Website_Click"/>
-            <MenuItem Header="Discord Support" Click="Discord_Click"/>
-            <Separator/>
-            <MenuItem Header="Open Hosts File Location" Click="OpenHostsLocation_Click"/>
-            <MenuItem Header="Reset Hosts File" Click="ResetHosts_Click"/>
-            <Separator/>
-            <MenuItem Header="About" Click="About_Click"/>
-        </ContextMenu>
-    </Window.ContextMenu>
 </Window>

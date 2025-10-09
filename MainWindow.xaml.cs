@@ -76,6 +76,7 @@ namespace AWSServerSelector
         private ApplyMode _applyMode = ApplyMode.Gatekeep;
         private BlockMode _blockMode = BlockMode.Both;
         private bool _mergeUnstable = true;
+        private string _currentLanguage = "en";
 
         // Path for saving user settings
         private static string SettingsFilePath =>
@@ -96,6 +97,7 @@ namespace AWSServerSelector
             public ApplyMode ApplyMode { get; set; }
             public BlockMode BlockMode { get; set; }
             public bool MergeUnstable { get; set; } = true;
+            public string Language { get; set; } = "en";
         }
 
 
@@ -110,16 +112,21 @@ namespace AWSServerSelector
         {
             InitializeComponent();
             DataContext = this;
+            LoadSettings();
             InitializeApplication();
+            
+            // Subscribe to language change events
+            LocalizationManager.LanguageChanged += OnLanguageChanged;
+            LocalizationManager.PropertyChanged += OnLocalizationPropertyChanged;
         }
 
         private async void InitializeApplication()
         {
-            LoadSettings();
             InitializeServerList();
             StartPingTimer();
             
             UpdateRegionListViewAppearance();
+            UpdateUI();
         }
 
         private void InitializeServerList()
@@ -135,14 +142,15 @@ namespace AWSServerSelector
             {
                 var groupItem = new ServerGroupItem
                 {
-                    GroupName = GetGroupDisplayName(group.Key),
+                    GroupName = LocalizationManager.GetGroupDisplayName(group.Key),
                     IsExpanded = true
                 };
                 
                 foreach (var kv in group.OrderBy(x => x.Key))
                 {
                     var regionKey = kv.Key;
-                    var displayName = regionKey + (kv.Value.Stable ? string.Empty : " ⚠︎");
+                    var translatedName = LocalizationManager.GetServerDisplayName(regionKey);
+                    var displayName = translatedName + (kv.Value.Stable ? string.Empty : " ⚠︎");
                     var isDisabled = IsServerDisabledInHosts(regionKey);
                     
                     var item = new ServerItem
@@ -151,19 +159,20 @@ namespace AWSServerSelector
                         DisplayName = displayName,
                         IsSelected = !isDisabled, // Выбираем все серверы, кроме отключенных в hosts
                         LatencyText = "…",
-                        IsStable = kv.Value.Stable
+                        IsStable = kv.Value.Stable,
+                        ParentGroup = groupItem
                     };
                     
                     // Проверяем, отключен ли сервер в hosts файле при инициализации
                     if (isDisabled)
                     {
                         item.LatencyText = "disabled";
-                        item.LatencyColor = new SolidColorBrush(Colors.DarkRed);
+                        item.LatencyColor = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Crimson red
                     }
                     
                     if (!kv.Value.Stable)
                     {
-                        item.TextColor = new SolidColorBrush(Colors.Orange);
+                        item.TextColor = new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Warning yellow
                         item.ToolTipText = "Unstable server: latency issues may occur.";
                     }
                     else
@@ -175,6 +184,8 @@ namespace AWSServerSelector
                     groupItem.Servers.Add(item);
                 }
                 
+                // Update the select all state for this group
+                groupItem.UpdateSelectAllState();
                 ServerGroups.Add(groupItem);
             }
             
@@ -206,6 +217,8 @@ namespace AWSServerSelector
                     _applyMode = settings.ApplyMode;
                     _blockMode = settings.BlockMode;
                     _mergeUnstable = settings.MergeUnstable;
+                    _currentLanguage = settings.Language;
+                    LocalizationManager.SetLanguage(_currentLanguage);
                 }
             }
             catch
@@ -226,6 +239,7 @@ namespace AWSServerSelector
                     ApplyMode = _applyMode,
                     BlockMode = _blockMode,
                     MergeUnstable = _mergeUnstable,
+                    Language = _currentLanguage,
                 };
                 var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(SettingsFilePath, json);
@@ -289,7 +303,7 @@ namespace AWSServerSelector
                         if (ms == -2)
                         {
                             item.LatencyText = "disabled";
-                            item.LatencyColor = new SolidColorBrush(Colors.DarkRed);
+                            item.LatencyColor = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Crimson red
                         }
                         else
                         {
@@ -303,12 +317,12 @@ namespace AWSServerSelector
 
         private SolidColorBrush GetColorForLatency(long ms)
         {
-            if (ms == -2) return new SolidColorBrush(Colors.DarkRed); // disabled
-            if (ms < 0) return new SolidColorBrush(Colors.Gray); // disconnected
-            if (ms < 80) return new SolidColorBrush(Colors.Green);
-            if (ms < 130) return new SolidColorBrush(Colors.Orange);
-            if (ms < 250) return new SolidColorBrush(Colors.Crimson);
-            return new SolidColorBrush(Colors.Purple);
+            if (ms == -2) return new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // disabled - crimson
+            if (ms < 0) return new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)); // disconnected - gray
+            if (ms < 80) return new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // good - green
+            if (ms < 130) return new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // warning - yellow
+            if (ms < 250) return new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // bad - crimson
+            return new SolidColorBrush(Color.FromRgb(0x6F, 0x42, 0xC1)); // very bad - purple
         }
 
         private bool IsServerDisabledInHosts(string regionKey)
@@ -617,6 +631,11 @@ namespace AWSServerSelector
             ShowAboutDialog();
         }
 
+        private void CheckUpdates_Click(object sender, RoutedEventArgs e)
+        {
+            ShowCheckUpdatesDialog();
+        }
+
         #endregion
 
         #region Helper Methods
@@ -666,14 +685,14 @@ namespace AWSServerSelector
                     var regionKey = item.RegionKey;
                     if (_mergeUnstable && !_regions[regionKey].Stable)
                     {
-                        item.DisplayName = regionKey;
+                        item.DisplayName = LocalizationManager.GetServerDisplayName(regionKey);
                         item.TextColor = new SolidColorBrush(Colors.White);
                         item.ToolTipText = string.Empty;
                     }
                     else if (!_regions[regionKey].Stable)
                     {
-                        item.DisplayName = regionKey + " ⚠︎";
-                        item.TextColor = new SolidColorBrush(Colors.Orange);
+                        item.DisplayName = LocalizationManager.GetServerDisplayName(regionKey) + " ⚠︎";
+                        item.TextColor = new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Warning yellow
                         item.ToolTipText = "Unstable server: latency issues may occur.";
                     }
                 }
@@ -738,23 +757,168 @@ namespace AWSServerSelector
         }
 
 
-        private void ShowAboutDialog()
+        private void UpdateUI()
         {
-            var about = new Window
+            Title = LocalizationManager.GetString("AppTitle");
+            
+            // Update XAML elements that use static bindings
+            var statusTextElement = this.FindName("StatusText") as System.Windows.Controls.TextBlock;
+            if (statusTextElement != null)
+                statusTextElement.Text = LocalizationManager.GetString("StatusText");
+                
+            // Force update of window title
+            OnPropertyChanged(nameof(Title));
+        }
+
+        private void OnLanguageChanged(object? sender, EventArgs e)
+        {
+            // Update UI elements that are not bound to static properties
+            Dispatcher.Invoke(() =>
             {
-                Title = "About AWS Realms",
-                Width = 500,
-                Height = 220,
+                UpdateUI();
+                UpdateServerNames();
+                UpdateXAMLBindings();
+                // Force refresh of XAML bindings
+                CommandManager.InvalidateRequerySuggested();
+                
+                // Force update of all server groups and items
+                foreach (var group in ServerGroups)
+                {
+                    group.OnPropertyChanged(nameof(ServerGroupItem.GroupName));
+                    foreach (var server in group.Servers)
+                    {
+                        server.OnPropertyChanged(nameof(ServerItem.DisplayName));
+                    }
+                }
+            });
+        }
+
+        private void OnLocalizationPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            // Force refresh of all XAML bindings when localization properties change
+            Dispatcher.Invoke(() =>
+            {
+                UpdateUI();
+                UpdateServerNames();
+                UpdateXAMLBindings();
+                CommandManager.InvalidateRequerySuggested();
+                
+                // Force update of all server groups and items
+                foreach (var group in ServerGroups)
+                {
+                    group.OnPropertyChanged(nameof(ServerGroupItem.GroupName));
+                    foreach (var server in group.Servers)
+                    {
+                        server.OnPropertyChanged(nameof(ServerItem.DisplayName));
+                    }
+                }
+            });
+        }
+
+        private void UpdateXAMLBindings()
+        {
+            // Force update of XAML bindings by refreshing the DataContext
+            var currentContext = DataContext;
+            DataContext = null;
+            DataContext = currentContext;
+            
+            // Force update of all static bindings by invalidating them
+            CommandManager.InvalidateRequerySuggested();
+            
+            // Force refresh of all XAML elements that use static bindings
+            this.InvalidateVisual();
+        }
+
+        private void UpdateServerNames()
+        {
+            // Update group names
+            foreach (var group in ServerGroups)
+            {
+                var originalGroupName = GetGroupName(group.Servers.FirstOrDefault()?.RegionKey ?? "");
+                group.GroupName = LocalizationManager.GetGroupDisplayName(originalGroupName);
+            }
+
+            // Update server names
+            foreach (var group in ServerGroups)
+            {
+                foreach (var item in group.Servers)
+                {
+                    var translatedName = LocalizationManager.GetServerDisplayName(item.RegionKey);
+                    var isUnstable = !_regions[item.RegionKey].Stable;
+                    item.DisplayName = translatedName + (isUnstable ? " ⚠︎" : "");
+                }
+            }
+        }
+
+        private void ShowCheckUpdatesDialog()
+        {
+            var updateDialog = new Window
+            {
+                Title = "Проверить обновления",
+                Width = 400,
+                Height = 200,
                 WindowStartupLocation = WindowStartupLocation.CenterOwner,
                 ResizeMode = ResizeMode.NoResize,
-                Background = new SolidColorBrush(Color.FromRgb(0x0D, 0x11, 0x17))
+                Background = new SolidColorBrush(Color.FromRgb(0x0A, 0x0A, 0x0A))
             };
 
             var panel = new StackPanel { Margin = new Thickness(20) };
             
             var title = new TextBlock
             {
-                Text = "AWS Realms - AWS Server Selector",
+                Text = "Проверка обновлений",
+                FontSize = 18,
+                FontWeight = FontWeights.Bold,
+                Foreground = Brushes.White,
+                Margin = new Thickness(0, 0, 0, 10)
+            };
+            
+            var status = new TextBlock
+            {
+                Text = "Проверяем наличие обновлений...",
+                FontSize = 12,
+                Foreground = Brushes.LightGray,
+                Margin = new Thickness(0, 0, 0, 20)
+            };
+            
+            var okButton = new Button
+            {
+                Content = "Закрыть",
+                Width = 100,
+                Height = 30,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Background = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)),
+                Foreground = Brushes.White,
+                BorderThickness = new Thickness(0)
+            };
+            okButton.Click += (s, e) => updateDialog.Close();
+            
+            panel.Children.Add(title);
+            panel.Children.Add(status);
+            panel.Children.Add(okButton);
+            
+            updateDialog.Content = panel;
+            updateDialog.Owner = this;
+            updateDialog.ShowDialog();
+        }
+
+        private void ShowAboutDialog()
+        {
+            var about = new Window
+            {
+                Title = LocalizationManager.GetString("AboutTitle"),
+                Width = 500,
+                Height = 220,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ResizeMode = ResizeMode.NoResize,
+                Background = new SolidColorBrush(Color.FromRgb(0x0A, 0x0A, 0x0A))
+            };
+
+            var panel = new StackPanel { Margin = new Thickness(20) };
+            
+            var title = new TextBlock
+            {
+                Text = LocalizationManager.GetString("AboutText"),
                 FontSize = 18,
                 FontWeight = FontWeights.Bold,
                 Foreground = Brushes.White,
@@ -763,7 +927,7 @@ namespace AWSServerSelector
             
             var developer = new TextBlock
             {
-                Text = "Developer: Ky",
+                Text = LocalizationManager.GetString("Developer"),
                 FontSize = 12,
                 Foreground = Brushes.LightGray,
                 Margin = new Thickness(0, 0, 0, 10)
@@ -771,7 +935,7 @@ namespace AWSServerSelector
             
             var version = new TextBlock
             {
-                Text = $"Version {CurrentVersion}\nModern WPF interface with AWS server selection\nWindows 10 or higher recommended.",
+                Text = LocalizationManager.GetString("Version", CurrentVersion),
                 FontSize = 11,
                 FontStyle = FontStyles.Italic,
                 Foreground = Brushes.LightGray,
@@ -780,11 +944,11 @@ namespace AWSServerSelector
             
             var okButton = new Button
             {
-                Content = "Awesome!",
+                Content = LocalizationManager.GetString("Awesome"),
                 Width = 100,
                 Height = 30,
                 HorizontalAlignment = HorizontalAlignment.Right,
-                Background = new SolidColorBrush(Color.FromRgb(0x00, 0x78, 0xD4)),
+                Background = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)),
                 Foreground = Brushes.White,
                 BorderThickness = new Thickness(0)
             };
@@ -802,116 +966,71 @@ namespace AWSServerSelector
 
         private void ShowSettingsDialog()
         {
-            var dialog = new Window
+            var dialog = new SettingsDialog
             {
-                Title = "Program Settings",
-                Width = 400,
-                Height = 400,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                ResizeMode = ResizeMode.NoResize,
-                Background = new SolidColorBrush(Color.FromRgb(0x2D, 0x2D, 0x30))
+                Owner = this,
+                SelectedLanguage = _currentLanguage,
+                SelectedMode = _applyMode == ApplyMode.UniversalRedirect ? "service" : "hosts",
+                IsBlockBoth = _blockMode == BlockMode.Both,
+                IsBlockPing = _blockMode == BlockMode.OnlyPing,
+                IsBlockService = _blockMode == BlockMode.OnlyService,
+                IsMergeUnstable = _mergeUnstable
             };
-
-            var panel = new StackPanel { Margin = new Thickness(20) };
-            
-            // Mode selection
-            var modeGroup = new GroupBox
-            {
-                Header = "Method",
-                Foreground = Brushes.White,
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-            
-            var modeCombo = new ComboBox
-            {
-                ItemsSource = new[] { "Gatekeep (default)", "Universal Redirect" },
-                SelectedIndex = _applyMode == ApplyMode.UniversalRedirect ? 1 : 0,
-                Margin = new Thickness(10)
-            };
-            
-            var modePanel = new StackPanel();
-            modePanel.Children.Add(modeCombo);
-            modeGroup.Content = modePanel;
-            
-            // Block options
-            var blockGroup = new GroupBox
-            {
-                Header = "Gatekeep Options",
-                Foreground = Brushes.White,
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-            
-            var rbBoth = new RadioButton { Content = "Block both (default)", IsChecked = _blockMode == BlockMode.Both };
-            var rbPing = new RadioButton { Content = "Block UDP ping beacon endpoints", IsChecked = _blockMode == BlockMode.OnlyPing };
-            var rbService = new RadioButton { Content = "Block service endpoints", IsChecked = _blockMode == BlockMode.OnlyService };
-            
-            var blockPanel = new StackPanel { Margin = new Thickness(10) };
-            blockPanel.Children.Add(rbBoth);
-            blockPanel.Children.Add(rbPing);
-            blockPanel.Children.Add(rbService);
-            blockGroup.Content = blockPanel;
-            
-            // Merge option
-            var mergeCheck = new CheckBox
-            {
-                Content = "Merge unstable servers (recommended)",
-                IsChecked = _mergeUnstable,
-                Margin = new Thickness(0, 0, 0, 20)
-            };
-            
-            // Buttons
-            var buttonPanel = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-            var okButton = new Button
-            {
-                Content = "Apply Changes",
-                Width = 120,
-                Height = 30,
-                Margin = new Thickness(0, 0, 10, 0),
-                Background = new SolidColorBrush(Color.FromRgb(0x00, 0x78, 0xD4)),
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(0)
-            };
-            okButton.Click += (s, e) => dialog.Close();
-            
-            var defaultButton = new Button
-            {
-                Content = "Default Options",
-                Width = 120,
-                Height = 30,
-                Background = new SolidColorBrush(Color.FromRgb(0x3E, 0x3E, 0x42)),
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(0)
-            };
-            defaultButton.Click += (s, e) =>
-            {
-                modeCombo.SelectedIndex = 0;
-                rbBoth.IsChecked = true;
-                mergeCheck.IsChecked = true;
-            };
-            
-            buttonPanel.Children.Add(okButton);
-            buttonPanel.Children.Add(defaultButton);
-            
-            panel.Children.Add(modeGroup);
-            panel.Children.Add(blockGroup);
-            panel.Children.Add(mergeCheck);
-            panel.Children.Add(buttonPanel);
-            
-            dialog.Content = panel;
-            dialog.Owner = this;
             
             if (dialog.ShowDialog() == true)
             {
-                _applyMode = modeCombo.SelectedIndex == 1 ? ApplyMode.UniversalRedirect : ApplyMode.Gatekeep;
-                if (_applyMode == ApplyMode.Gatekeep)
+                // Check if language changed
+                bool languageChanged = dialog.SelectedLanguage != _currentLanguage;
+                
+                // Check if mode changed
+                bool modeChanged = dialog.SelectedMode != (_applyMode == ApplyMode.UniversalRedirect ? "service" : "hosts");
+                
+                // Check if block mode changed
+                BlockMode newBlockMode = BlockMode.Both;
+                if (dialog.IsBlockPing) newBlockMode = BlockMode.OnlyPing;
+                else if (dialog.IsBlockService) newBlockMode = BlockMode.OnlyService;
+                bool blockModeChanged = newBlockMode != _blockMode;
+                
+                // Check if merge unstable changed
+                bool mergeUnstableChanged = dialog.IsMergeUnstable != _mergeUnstable;
+                
+                // Apply changes
+                if (languageChanged)
                 {
-                    if (rbBoth.IsChecked == true) _blockMode = BlockMode.Both;
-                    else if (rbPing.IsChecked == true) _blockMode = BlockMode.OnlyPing;
-                    else _blockMode = BlockMode.OnlyService;
+                    _currentLanguage = dialog.SelectedLanguage;
+                    LocalizationManager.SetLanguageAndNotify(_currentLanguage);
                 }
-                _mergeUnstable = mergeCheck.IsChecked == true;
+                
+                if (modeChanged)
+                {
+                    _applyMode = dialog.SelectedMode == "service" ? ApplyMode.UniversalRedirect : ApplyMode.Gatekeep;
+                    OnPropertyChanged(nameof(ApplyMode));
+                }
+                
+                if (blockModeChanged)
+                {
+                    _blockMode = newBlockMode;
+                    OnPropertyChanged(nameof(BlockMode));
+                }
+                
+                if (mergeUnstableChanged)
+                {
+                    _mergeUnstable = dialog.IsMergeUnstable;
+                    OnPropertyChanged(nameof(_mergeUnstable));
+                }
+                
+                // Save settings
+                SaveSettings();
+                
+                // Update UI if language changed
+                if (languageChanged)
+                {
+                    UpdateUI();
+                }
+                
                 SaveSettings();
                 UpdateRegionListViewAppearance();
+                UpdateUI();
             }
         }
 
@@ -981,7 +1100,7 @@ namespace AWSServerSelector
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged(string propertyName)
+        public virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
@@ -994,7 +1113,313 @@ namespace AWSServerSelector
         {
             _pingTimer?.Stop();
             _pinger?.Dispose();
+            LocalizationManager.LanguageChanged -= OnLanguageChanged;
+            LocalizationManager.PropertyChanged -= OnLocalizationPropertyChanged;
             base.OnClosed(e);
+        }
+
+        #endregion
+
+        #region Modern Settings Dialog Helpers
+
+        private Border CreateModernCard(string title, FrameworkElement content, Thickness margin)
+        {
+            var card = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x40, 0x40, 0x40)),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(12),
+                Margin = margin,
+                Effect = new System.Windows.Media.Effects.DropShadowEffect
+                {
+                    Color = Colors.Black,
+                    BlurRadius = 10,
+                    ShadowDepth = 2,
+                    Opacity = 0.3
+                }
+            };
+
+            var header = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)),
+                CornerRadius = new CornerRadius(12, 12, 0, 0),
+                Padding = new Thickness(20, 15, 20, 15)
+            };
+
+            var headerText = new TextBlock
+            {
+                Text = title,
+                FontSize = 16,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = new SolidColorBrush(Colors.White)
+            };
+
+            header.Child = headerText;
+
+            var contentBorder = new Border
+            {
+                Padding = new Thickness(20, 15, 20, 15),
+                CornerRadius = new CornerRadius(0, 0, 12, 12)
+            };
+
+            contentBorder.Child = content;
+
+            var cardStack = new StackPanel();
+            cardStack.Children.Add(header);
+            cardStack.Children.Add(contentBorder);
+
+            card.Child = cardStack;
+            return card;
+        }
+
+        private FrameworkElement CreateLanguageSection()
+        {
+            var languageCombo = new ComboBox
+            {
+                ItemsSource = new[] { 
+                    new { Name = LocalizationManager.GetString("English"), Code = "en" },
+                    new { Name = LocalizationManager.GetString("Russian"), Code = "ru" }
+                },
+                DisplayMemberPath = "Name",
+                SelectedValuePath = "Code",
+                SelectedValue = _currentLanguage,
+                Height = 40,
+                FontSize = 14,
+                Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)),
+                Foreground = new SolidColorBrush(Colors.White),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x40, 0x40, 0x40)),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(12, 8, 12, 8)
+            };
+
+            return languageCombo;
+        }
+
+        private FrameworkElement CreateModeSection()
+        {
+            var modeCombo = new ComboBox
+            {
+                ItemsSource = new[] { 
+                    LocalizationManager.GetString("GatekeepDefault"), 
+                    LocalizationManager.GetString("UniversalRedirect") 
+                },
+                SelectedIndex = _applyMode == ApplyMode.UniversalRedirect ? 1 : 0,
+                Height = 40,
+                FontSize = 14,
+                Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)),
+                Foreground = new SolidColorBrush(Colors.White),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x40, 0x40, 0x40)),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(12, 8, 12, 8)
+            };
+
+            return modeCombo;
+        }
+
+        private FrameworkElement CreateBlockSection()
+        {
+            var panel = new StackPanel();
+
+            var rbBoth = CreateModernRadioButton(LocalizationManager.GetString("BlockBoth"), _blockMode == BlockMode.Both);
+            var rbPing = CreateModernRadioButton(LocalizationManager.GetString("BlockPing"), _blockMode == BlockMode.OnlyPing);
+            var rbService = CreateModernRadioButton(LocalizationManager.GetString("BlockService"), _blockMode == BlockMode.OnlyService);
+
+            panel.Children.Add(rbBoth);
+            panel.Children.Add(rbPing);
+            panel.Children.Add(rbService);
+
+            return panel;
+        }
+
+        private FrameworkElement CreateAdvancedSection()
+        {
+            var panel = new StackPanel();
+
+            var mergeCheck = CreateModernCheckBox(LocalizationManager.GetString("MergeUnstable"), _mergeUnstable);
+
+            panel.Children.Add(mergeCheck);
+
+            return panel;
+        }
+
+        private RadioButton CreateModernRadioButton(string content, bool isChecked)
+        {
+            var radioButton = new RadioButton
+            {
+                Content = content,
+                IsChecked = isChecked,
+                FontSize = 14,
+                Foreground = new SolidColorBrush(Colors.White),
+                Margin = new Thickness(0, 4, 0, 4),
+                Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x40, 0x40, 0x40)),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(8, 6, 8, 6)
+            };
+
+            return radioButton;
+        }
+
+        private CheckBox CreateModernCheckBox(string content, bool isChecked)
+        {
+            var checkBox = new CheckBox
+            {
+                Content = content,
+                IsChecked = isChecked,
+                FontSize = 14,
+                Foreground = new SolidColorBrush(Colors.White),
+                Margin = new Thickness(0, 4, 0, 4),
+                Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x40, 0x40, 0x40)),
+                BorderThickness = new Thickness(1),
+                Padding = new Thickness(8, 6, 8, 6)
+            };
+
+            return checkBox;
+        }
+
+        private Border CreateModernButtonPanel(Window dialog)
+        {
+            var buttonPanel = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0x1A, 0x1A, 0x1A)),
+                BorderBrush = new SolidColorBrush(Color.FromRgb(0x40, 0x40, 0x40)),
+                BorderThickness = new Thickness(0, 1, 0, 0),
+                Padding = new Thickness(25, 20, 25, 20)
+            };
+
+            var buttonStack = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+
+            var defaultButton = CreateModernButton(
+                LocalizationManager.GetString("DefaultOptions"),
+                new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)),
+                new SolidColorBrush(Color.FromRgb(0x40, 0x40, 0x40)),
+                () => ResetToDefaults(dialog)
+            );
+
+            var applyButton = CreateModernButton(
+                LocalizationManager.GetString("ApplyChanges"),
+                new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)),
+                new SolidColorBrush(Color.FromRgb(0xE7, 0x4C, 0x3C)),
+                () => dialog.DialogResult = true
+            );
+
+            buttonStack.Children.Add(defaultButton);
+            buttonStack.Children.Add(applyButton);
+
+            buttonPanel.Child = buttonStack;
+            return buttonPanel;
+        }
+
+        private Button CreateModernButton(string content, SolidColorBrush background, SolidColorBrush hoverBackground, Action clickAction)
+        {
+            var button = new Button
+            {
+                Content = content,
+                Width = 140,
+                Height = 40,
+                FontSize = 14,
+                FontWeight = FontWeights.SemiBold,
+                Background = background,
+                Foreground = new SolidColorBrush(Colors.White),
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                Template = CreateModernButtonTemplate(background, hoverBackground)
+            };
+
+            button.Click += (s, e) => clickAction();
+            return button;
+        }
+
+        private ControlTemplate CreateModernButtonTemplate(SolidColorBrush background, SolidColorBrush hoverBackground)
+        {
+            var template = new ControlTemplate(typeof(Button));
+            
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.SetValue(Border.BackgroundProperty, new TemplateBindingExtension(Button.BackgroundProperty));
+            border.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
+            border.SetValue(Border.PaddingProperty, new Thickness(20, 12, 20, 12));
+
+            var contentPresenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            contentPresenter.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            contentPresenter.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+
+            border.AppendChild(contentPresenter);
+
+            // Hover trigger
+            var hoverTrigger = new Trigger { Property = Button.IsMouseOverProperty, Value = true };
+            hoverTrigger.Setters.Add(new Setter(Border.BackgroundProperty, hoverBackground));
+            template.Triggers.Add(hoverTrigger);
+
+            // Pressed trigger
+            var pressedTrigger = new Trigger { Property = Button.IsPressedProperty, Value = true };
+            pressedTrigger.Setters.Add(new Setter(Border.BackgroundProperty, new SolidColorBrush(Color.FromRgb(0xB7, 0x1C, 0x1C))));
+            template.Triggers.Add(pressedTrigger);
+
+            template.VisualTree = border;
+            return template;
+        }
+
+
+        private void ResetToDefaults(Window dialog)
+        {
+            // Find and reset all controls
+            var languageCombo = FindComboBoxInDialog(dialog, 0);
+            var modeCombo = FindComboBoxInDialog(dialog, 1);
+            var rbBoth = FindRadioButtonInDialog(dialog, 0);
+            var mergeCheck = FindCheckBoxInDialog(dialog);
+
+            if (languageCombo != null) languageCombo.SelectedValue = "en";
+            if (modeCombo != null) modeCombo.SelectedIndex = 0;
+            if (rbBoth != null) rbBoth.IsChecked = true;
+            if (mergeCheck != null) mergeCheck.IsChecked = true;
+        }
+
+        private ComboBox FindComboBoxInDialog(Window dialog, int index)
+        {
+            return FindVisualChildren<ComboBox>(dialog).ElementAtOrDefault(index);
+        }
+
+        private RadioButton FindRadioButtonInDialog(Window dialog, int index)
+        {
+            return FindVisualChildren<RadioButton>(dialog).ElementAtOrDefault(index);
+        }
+
+        private CheckBox FindCheckBoxInDialog(Window dialog)
+        {
+            return FindVisualChildren<CheckBox>(dialog).FirstOrDefault();
+        }
+
+        private ComboBox FindComboBoxInCard(Border card, int index = 0)
+        {
+            return FindVisualChildren<ComboBox>(card).ElementAtOrDefault(index);
+        }
+
+        private RadioButton FindRadioButtonInCard(Border card, int index)
+        {
+            return FindVisualChildren<RadioButton>(card).ElementAtOrDefault(index);
+        }
+
+        private CheckBox FindCheckBoxInCard(Border card)
+        {
+            return FindVisualChildren<CheckBox>(card).FirstOrDefault();
+        }
+
+        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T result)
+                    yield return result;
+                foreach (var childOfChild in FindVisualChildren<T>(child))
+                    yield return childOfChild;
+            }
         }
 
         #endregion
@@ -1006,11 +1431,63 @@ namespace AWSServerSelector
         public ObservableCollection<ServerItem> Servers { get; set; } = new();
         public bool IsExpanded { get; set; } = true;
         
+        private bool? _isAllSelected;
+        public bool? IsAllSelected
+        {
+            get => _isAllSelected;
+            set
+            {
+                if (_isAllSelected != value)
+                {
+                    _isAllSelected = value;
+                    OnPropertyChanged(nameof(IsAllSelected));
+                    
+                    // Update all servers in the group
+                    if (value.HasValue)
+                    {
+                        foreach (var server in Servers)
+                        {
+                            // Temporarily disable the notification to avoid circular updates
+                            var oldParent = server.ParentGroup;
+                            server.ParentGroup = null;
+                            server.IsSelected = value.Value;
+                            server.ParentGroup = oldParent;
+                        }
+                    }
+                }
+            }
+        }
+        
         public event PropertyChangedEventHandler? PropertyChanged;
         
-        protected virtual void OnPropertyChanged(string propertyName)
+        public virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+        
+        public void UpdateSelectAllState()
+        {
+            if (Servers.Count == 0)
+            {
+                _isAllSelected = false;
+                OnPropertyChanged(nameof(IsAllSelected));
+                return;
+            }
+            
+            var selectedCount = Servers.Count(s => s.IsSelected);
+            bool? newState;
+            if (selectedCount == 0)
+                newState = false;
+            else if (selectedCount == Servers.Count)
+                newState = true;
+            else
+                newState = null; // Indeterminate state
+                
+            if (_isAllSelected != newState)
+            {
+                _isAllSelected = newState;
+                OnPropertyChanged(nameof(IsAllSelected));
+            }
         }
     }
 
@@ -1020,6 +1497,7 @@ namespace AWSServerSelector
         public string DisplayName { get; set; } = string.Empty;
         public string ToolTipText { get; set; } = string.Empty;
         public bool IsStable { get; set; }
+        public ServerGroupItem? ParentGroup { get; set; }
         
         private bool _isSelected;
         public bool IsSelected
@@ -1029,6 +1507,9 @@ namespace AWSServerSelector
             {
                 _isSelected = value;
                 OnPropertyChanged(nameof(IsSelected));
+                
+                // Notify parent group to update its select all state
+                ParentGroup?.UpdateSelectAllState();
             }
         }
         
@@ -1067,7 +1548,7 @@ namespace AWSServerSelector
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
-        protected virtual void OnPropertyChanged(string propertyName)
+        public virtual void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
