@@ -8,8 +8,8 @@
     <UseWPF>true</UseWPF>
     <AssemblyTitle>PingByDaylight</AssemblyTitle>
     <AssemblyDescription>PingByDaylight - Dead by Daylight Server Selector</AssemblyDescription>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
     <AssemblyName>PingByDaylight</AssemblyName>
     <RootNamespace>PingByDaylight</RootNamespace>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
