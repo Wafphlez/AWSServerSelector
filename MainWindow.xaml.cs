@@ -400,7 +400,7 @@ namespace AWSServerSelector
                 if (selectedItems.Count != 1)
                 {
                     MessageBox.Show(
-                        "Please select only one server when using Universal Redirect mode.",
+                        "Пожалуйста, выберите только один сервер при использовании режима Universal Redirect.",
                         "Universal Redirect",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
@@ -427,8 +427,8 @@ namespace AWSServerSelector
                 catch (Exception ex)
                 {
                     MessageBox.Show(
-                        "Failed to resolve IP addresses for Universal Redirect mode via DNS:\n" + ex.Message,
-                        "Universal Redirect Error",
+                        "Не удалось разрешить IP-адреса для режима Universal Redirect через DNS:\n" + ex.Message,
+                        "Ошибка Universal Redirect",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                     return;
@@ -459,22 +459,22 @@ namespace AWSServerSelector
                     WriteWrappedHostsSection(sb.ToString());
                     FlushDns();
                     MessageBox.Show(
-                        "The hosts file was updated successfully (Universal Redirect).\n\nPlease restart the game in order for changes to take effect.",
-                        "Success",
+                        "Файл hosts был успешно обновлен (Universal Redirect).\n\nПожалуйста, перезапустите игру, чтобы изменения вступили в силу.",
+                        "Успех",
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                 }
                 catch (UnauthorizedAccessException)
                 {
                     MessageBox.Show(
-                        "Please run as Administrator to modify the hosts file.",
-                        "Permission Denied",
+                        "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
+                        "Доступ запрещен",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 return;
             }
@@ -483,8 +483,8 @@ namespace AWSServerSelector
             if (selectedItems.Count == 0)
             {
                 MessageBox.Show(
-                    "Please select at least one server to allow.",
-                    "No Server Selected",
+                    "Пожалуйста, выберите хотя бы один сервер для разрешения.",
+                    "Сервер не выбран",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 return;
@@ -515,9 +515,9 @@ namespace AWSServerSelector
                     if (missing.Count > 0)
                     {
                         MessageBox.Show(
-                            "Merge unstable servers option is enabled, but no stable servers found for: " +
-                            string.Join(", ", missing) + ".\nDisable merging unstable servers in the options menu or select a stable server manually.",
-                            "No Stable Servers Found",
+                            "Опция объединения нестабильных серверов включена, но стабильные серверы не найдены для: " +
+                            string.Join(", ", missing) + ".\nОтключите объединение нестабильных серверов в меню настроек или выберите стабильный сервер вручную.",
+                            "Стабильные серверы не найдены",
                             MessageBoxButton.OK,
                             MessageBoxImage.Error);
                         return;
@@ -572,22 +572,22 @@ namespace AWSServerSelector
                 WriteWrappedHostsSection(sb.ToString());
                 FlushDns();
                 MessageBox.Show(
-                    "The hosts file was updated successfully (Gatekeep).\n\nPlease restart the game in order for changes to take effect.",
-                    "Success",
+                    "Файл hosts был успешно обновлен (Gatekeep).\n\nПожалуйста, перезапустите игру, чтобы изменения вступили в силу.",
+                    "Успех",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
             catch (UnauthorizedAccessException)
             {
                 MessageBox.Show(
-                    "Please run as Administrator to modify the hosts file.",
-                    "Permission Denied",
+                    "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
+                    "Доступ запрещен",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -599,22 +599,22 @@ namespace AWSServerSelector
                 WriteWrappedHostsSection(string.Empty);
                 FlushDns();
                 MessageBox.Show(
-                    "Cleared AWS Realms entries. Your existing hosts lines were left untouched.",
-                    "Reverted",
+                    "Записи AWS Realms очищены. Ваши существующие строки hosts остались нетронутыми.",
+                    "Отменено",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
             catch (UnauthorizedAccessException)
             {
                 MessageBox.Show(
-                    "Please run as Administrator to modify the hosts file.",
-                    "Permission Denied",
+                    "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
+                    "Доступ запрещен",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -974,8 +974,11 @@ namespace AWSServerSelector
             var updateDialog = new UpdateDialog
             {
                 Owner = this,
-                StatusText = "Проверяем наличие обновлений..."
+                StatusText = LocalizationManager.GetString("CheckingUpdates")
             };
+            
+            // Запускаем проверку обновлений в диалоге
+            updateDialog.StartUpdateCheck(CurrentVersion);
             
             updateDialog.ShowDialog();
         }
@@ -1068,8 +1071,8 @@ namespace AWSServerSelector
         private void RestoreWindowsDefaultHostsFile()
         {
             var confirm = MessageBox.Show(
-                "If you are having problems, or the program doesn't seem to work correctly, try resetting your hosts file.\n\nThis will overwrite your entire hosts file with the Windows default.\n\nA backup will be saved as hosts.bak. Continue?",
-                "Restore Windows default hosts file",
+                "Если у вас возникли проблемы или программа не работает корректно, попробуйте сбросить файл hosts.\n\nЭто перезапишет весь ваш файл hosts значениями по умолчанию Windows.\n\nРезервная копия будет сохранена как hosts.bak. Продолжить?",
+                "Восстановить файл hosts по умолчанию Windows",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
             if (confirm != MessageBoxResult.Yes)
@@ -1106,22 +1109,22 @@ namespace AWSServerSelector
                 FlushDns();
 
                 MessageBox.Show(
-                    "Hosts file restored to Windows default template.",
-                    "Success",
+                    "Файл hosts восстановлен до шаблона по умолчанию Windows.",
+                    "Успех",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
             }
             catch (UnauthorizedAccessException)
             {
                 MessageBox.Show(
-                    "Please run as Administrator to modify the hosts file.",
-                    "Permission Denied",
+                    "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
+                    "Доступ запрещен",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1650,8 +1653,8 @@ namespace AWSServerSelector
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    $"Failed to open hosts file: {ex.Message}\n\nPath: {HostsPath}",
-                    "Error",
+                    $"Не удалось открыть файл hosts: {ex.Message}\n\nПуть: {HostsPath}",
+                    "Ошибка",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }

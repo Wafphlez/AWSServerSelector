@@ -8,7 +8,13 @@
         ResizeMode="NoResize"
         Background="#0A0A0A"
         FontFamily="Segoe UI Variable"
-        Icon="Resources/icon.ico">
+        Icon="Resources/icon.ico"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Aliased"
+        RenderOptions.BitmapScalingMode="NearestNeighbor"
+        RenderOptions.EdgeMode="Aliased"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True">
     
     <Window.Resources>
         <!-- Modern Button Style -->
@@ -57,13 +63,43 @@
                    Margin="0,0,0,10"
                    TextWrapping="Wrap"/>
         
-        <!-- Close Button -->
-        <Button Content="Закрыть"
-                Width="100"
-                Height="30"
-                HorizontalAlignment="Right"
-                Style="{StaticResource ModernButton}"
-                Click="CloseButton_Click"/>
+        <!-- Update Info (visible when update is available) -->
+        <StackPanel x:Name="UpdateInfoPanel" Visibility="Collapsed" Margin="0,0,0,15">
+            <TextBlock Text="{Binding UpdateTitle}"
+                       FontSize="14"
+                       FontWeight="Bold"
+                       Foreground="#FF28A745"
+                       Margin="0,0,0,5"/>
+            
+            <TextBlock Text="{Binding UpdateDescription}"
+                       FontSize="11"
+                       Foreground="LightGray"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,10"/>
+            
+            <TextBlock Text="{Binding UpdateSize}"
+                       FontSize="10"
+                       Foreground="Gray"
+                       Margin="0,0,0,10"/>
+        </StackPanel>
+        
+        <!-- Buttons -->
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="DownloadButton" 
+                    Content="Скачать обновление"
+                    Width="150"
+                    Height="30"
+                    Margin="0,0,10,0"
+                    Style="{StaticResource ModernButton}"
+                    Click="DownloadButton_Click"
+                    Visibility="Collapsed"/>
+            
+            <Button Content="Закрыть"
+                    Width="100"
+                    Height="30"
+                    Style="{StaticResource ModernButton}"
+                    Click="CloseButton_Click"/>
+        </StackPanel>
     </StackPanel>
 </Window>
 

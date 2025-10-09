@@ -11,7 +11,13 @@
         WindowStartupLocation="CenterScreen"
         Background="#FF0A0A0A"
         FontFamily="Segoe UI Variable"
-        Icon="Resources/icon.ico">
+        Icon="Resources/icon.ico"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Aliased"
+        RenderOptions.BitmapScalingMode="NearestNeighbor"
+        RenderOptions.EdgeMode="Aliased"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True">
     
     <Window.Resources>
         <!-- Dead by Daylight Inspired Dark Theme -->
@@ -91,6 +97,26 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
             <Setter Property="SelectionMode" Value="Multiple"/>
+        </Style>
+        
+        <!-- TextBlock Styles for Clear Text Rendering -->
+        <Style x:Key="ClearTextBlock" TargetType="TextBlock">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="Aliased"/>
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="NearestNeighbor"/>
+            <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+        </Style>
+        
+        <!-- Global TextBlock Style for All TextBlocks -->
+        <Style TargetType="TextBlock">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="Aliased"/>
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="NearestNeighbor"/>
+            <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
         </Style>
         
         
@@ -225,14 +251,16 @@
                                   Text="{x:Static local:LocalizationManager.SelectServers}" 
                                   Foreground="{StaticResource TextBrush}" 
                                   FontWeight="SemiBold"
-                                  FontSize="16"/>
+                                  FontSize="16"
+                                  Style="{StaticResource ClearTextBlock}"/>
                         <TextBlock x:Name="LatencyText" Grid.Column="2" 
                                   Text="{x:Static local:LocalizationManager.Latency}" 
                                   Foreground="{StaticResource TextBrush}" 
                                   FontWeight="SemiBold"
                                   FontSize="16"
                                   HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"/>
+                                  VerticalAlignment="Center"
+                                  Style="{StaticResource ClearTextBlock}"/>
                     </Grid>
                 </Border>
                 
@@ -244,6 +272,8 @@
                          SelectionMode="Multiple"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         ScrollViewer.CanContentScroll="False"
+                         ScrollViewer.IsDeferredScrollingEnabled="False"
                          Background="Transparent"
                          ItemsSource="{Binding ServerGroups}" d:ItemsSource="{d:SampleData ItemCount=5}">
                     <ListView.ItemContainerStyle>
@@ -317,7 +347,8 @@
                                                       Foreground="{StaticResource TextBrush}"
                                                       FontWeight="SemiBold"
                                                       FontSize="14"
-                                                      VerticalAlignment="Center"/>
+                                                      VerticalAlignment="Center"
+                                                      Style="{StaticResource ClearTextBlock}"/>
                                         </Grid>
                                     </Border>
                                 </Expander.Header>
@@ -340,7 +371,8 @@
                                                                   Foreground="{Binding TextColor}"
                                                                   VerticalAlignment="Center"
                                                                   FontSize="13"
-                                                                  FontWeight="Medium"/>
+                                                                  FontWeight="Medium"
+                                                                  Style="{StaticResource ClearTextBlock}"/>
                                                     </StackPanel>
                                                     
                                                     <Border Grid.Column="1" Background="Transparent"/>
@@ -356,7 +388,8 @@
                                                                   Foreground="White"
                                                                   FontWeight="SemiBold"
                                                                   FontSize="11"
-                                                                  HorizontalAlignment="Center"/>
+                                                                  HorizontalAlignment="Center"
+                                                                  Style="{StaticResource ClearTextBlock}"/>
                                                     </Border>
                                                 </Grid>
                                             </DataTemplate>
@@ -386,14 +419,16 @@
                           Foreground="{StaticResource AccentBrush}" 
                           FontSize="14"
                           VerticalAlignment="Top"
-                          Margin="0,0,8,0"/>
+                          Margin="0,0,8,0"
+                          Style="{StaticResource ClearTextBlock}"/>
                 <TextBlock Grid.Column="1"
                           x:Name="StatusText" 
                           Text="{x:Static local:LocalizationManager.StatusText}" 
                           Foreground="{StaticResource SubTextBrush}" 
                           FontSize="13"
                           TextWrapping="Wrap"
-                          VerticalAlignment="Top"/>
+                          VerticalAlignment="Top"
+                          Style="{StaticResource ClearTextBlock}"/>
             </Grid>
         </Border>
         

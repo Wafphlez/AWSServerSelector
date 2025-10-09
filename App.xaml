@@ -4,6 +4,74 @@
              xmlns:local="clr-namespace:AWSServerSelector"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <!-- Global TextBlock Style for All TextBlocks -->
+        <Style TargetType="TextBlock">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="Aliased"/>
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="NearestNeighbor"/>
+            <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+        </Style>
+        
+        <!-- Global Label Style for All Labels -->
+        <Style TargetType="Label">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="Aliased"/>
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="NearestNeighbor"/>
+            <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+        </Style>
+        
+        <!-- Global Button Style for All Buttons -->
+        <Style TargetType="Button">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="Aliased"/>
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="NearestNeighbor"/>
+            <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+        </Style>
+        
+        <!-- Global MenuItem Style for All MenuItems -->
+        <Style TargetType="MenuItem">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="Aliased"/>
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="NearestNeighbor"/>
+            <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+        </Style>
+        
+        <!-- Global ComboBox Style for All ComboBoxes -->
+        <Style TargetType="ComboBox">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="Aliased"/>
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="NearestNeighbor"/>
+            <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+        </Style>
+        
+        <!-- Global CheckBox Style for All CheckBoxes -->
+        <Style TargetType="CheckBox">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="Aliased"/>
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="NearestNeighbor"/>
+            <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+        </Style>
+        
+        <!-- Global RadioButton Style for All RadioButtons -->
+        <Style TargetType="RadioButton">
+            <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
+            <Setter Property="TextOptions.TextRenderingMode" Value="Aliased"/>
+            <Setter Property="RenderOptions.BitmapScalingMode" Value="NearestNeighbor"/>
+            <Setter Property="RenderOptions.EdgeMode" Value="Aliased"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+        </Style>
     </Application.Resources>
 </Application>

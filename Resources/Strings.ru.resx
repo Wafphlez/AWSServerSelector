@@ -226,4 +226,28 @@
   <data name="CheckUpdates" xml:space="preserve">
     <value>Проверить обновления</value>
   </data>
+  <data name="UpdateAvailable" xml:space="preserve">
+    <value>Доступно обновление</value>
+  </data>
+  <data name="DownloadUpdate" xml:space="preserve">
+    <value>Скачать обновление</value>
+  </data>
+  <data name="NoUpdatesAvailable" xml:space="preserve">
+    <value>У вас установлена последняя версия программы.</value>
+  </data>
+  <data name="CheckingUpdates" xml:space="preserve">
+    <value>Проверяем наличие обновлений...</value>
+  </data>
+  <data name="UpdateSize" xml:space="preserve">
+    <value>Размер:</value>
+  </data>
+  <data name="UpdateDownloadUnavailable" xml:space="preserve">
+    <value>Обновление найдено, но файл для скачивания недоступен.</value>
+  </data>
+  <data name="UpdateCheckFailed" xml:space="preserve">
+    <value>Не удалось получить информацию об обновлениях.</value>
+  </data>
+  <data name="UpdateCheckError" xml:space="preserve">
+    <value>Ошибка при проверке обновлений:</value>
+  </data>
 </root>

@@ -226,4 +226,28 @@
   <data name="CheckUpdates" xml:space="preserve">
     <value>Check for Updates</value>
   </data>
+  <data name="UpdateAvailable" xml:space="preserve">
+    <value>Update Available</value>
+  </data>
+  <data name="DownloadUpdate" xml:space="preserve">
+    <value>Download Update</value>
+  </data>
+  <data name="NoUpdatesAvailable" xml:space="preserve">
+    <value>You have the latest version of the program.</value>
+  </data>
+  <data name="CheckingUpdates" xml:space="preserve">
+    <value>Checking for updates...</value>
+  </data>
+  <data name="UpdateSize" xml:space="preserve">
+    <value>Size:</value>
+  </data>
+  <data name="UpdateDownloadUnavailable" xml:space="preserve">
+    <value>Update found, but download file is not available.</value>
+  </data>
+  <data name="UpdateCheckFailed" xml:space="preserve">
+    <value>Failed to get update information.</value>
+  </data>
+  <data name="UpdateCheckError" xml:space="preserve">
+    <value>Error checking for updates:</value>
+  </data>
 </root>

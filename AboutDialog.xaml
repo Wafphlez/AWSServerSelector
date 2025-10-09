@@ -8,7 +8,13 @@
         ResizeMode="NoResize"
         Background="#0A0A0A"
         FontFamily="Segoe UI Variable"
-        Icon="Resources/icon.ico">
+        Icon="Resources/icon.ico"
+        TextOptions.TextFormattingMode="Ideal"
+        TextOptions.TextRenderingMode="Aliased"
+        RenderOptions.BitmapScalingMode="NearestNeighbor"
+        RenderOptions.EdgeMode="Aliased"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True">
     
     <Window.Resources>
         <!-- Modern Button Style -->
