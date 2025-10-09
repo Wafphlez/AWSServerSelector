@@ -928,11 +928,11 @@ namespace AWSServerSelector
                 checkUpdatesMenuItem.Header = LocalizationManager.GetString("CheckUpdates");
             }
             
-            // Update buttons
-            var openHostsButton = this.FindName("OpenHostsButton") as Button;
-            if (openHostsButton != null)
+            // Update menu items
+            var openHostsMenuItem = this.FindName("OpenHostsMenuItem") as MenuItem;
+            if (openHostsMenuItem != null)
             {
-                openHostsButton.Content = LocalizationManager.GetString("OpenHosts");
+                openHostsMenuItem.Header = LocalizationManager.GetString("OpenHosts");
             }
             
             var revertButton = this.FindName("RevertButton") as Button;
@@ -1465,6 +1465,20 @@ namespace AWSServerSelector
         public ObservableCollection<ServerItem> Servers { get; set; } = new();
         public bool IsExpanded { get; set; } = true;
         
+        private bool _isGroupHovered;
+        public bool IsGroupHovered
+        {
+            get => _isGroupHovered;
+            set
+            {
+                if (_isGroupHovered != value)
+                {
+                    _isGroupHovered = value;
+                    OnPropertyChanged(nameof(IsGroupHovered));
+                }
+            }
+        }
+        
         private bool? _isAllSelected;
         public bool? IsAllSelected
         {
@@ -1635,9 +1649,101 @@ namespace AWSServerSelector
         }
     }
 
-    // Open hosts file button handler
+    // Event handlers
     public partial class MainWindow
     {
+        private void ServerItem_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            // Останавливаем всплытие события, чтобы клик не дошел до Expander
+            e.Handled = true;
+            
+            // Вручную выполняем команду переключения
+            if (sender is FrameworkElement element && element.DataContext is ServerItem serverItem)
+            {
+                serverItem.IsSelected = !serverItem.IsSelected;
+            }
+        }
+        
+        private void GroupHeader_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is ServerGroupItem groupItem)
+            {
+                groupItem.IsGroupHovered = true;
+                
+                // Подсвечиваем все серверы в группе
+                UpdateServerItemsBackgroundFromHeader(element, true);
+            }
+        }
+        
+        private void GroupHeader_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is FrameworkElement element && element.DataContext is ServerGroupItem groupItem)
+            {
+                groupItem.IsGroupHovered = false;
+                
+                // Убираем подсветку со всех серверов в группе
+                UpdateServerItemsBackgroundFromHeader(element, false);
+            }
+        }
+        
+        private void UpdateServerItemsBackgroundFromHeader(FrameworkElement header, bool isHovered)
+        {
+            // Ищем родительский Expander
+            var expander = FindParent<Expander>(header);
+            if (expander != null)
+            {
+                // Ищем только внешние Border элементы серверов (с Margin="15,4" и Cursor="Hand")
+                var serverBorders = FindVisualChildren<Border>(expander)
+                    .Where(b => b.DataContext is ServerItem 
+                               && b.Cursor == Cursors.Hand
+                               && b.Margin.Left == 15 
+                               && b.Margin.Top == 4);
+                
+                var color = isHovered ? new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A)) : Brushes.Transparent;
+                
+                foreach (var border in serverBorders)
+                {
+                    border.Background = color;
+                }
+            }
+        }
+        
+        private static T? FindParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            var parentObject = VisualTreeHelper.GetParent(child);
+            
+            if (parentObject == null) return null;
+            
+            if (parentObject is T parent)
+                return parent;
+            
+            return FindParent<T>(parentObject);
+        }
+        
+        private void ServerItem_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is Border border)
+            {
+                border.Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A));
+            }
+        }
+        
+        private void ServerItem_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is Border border && border.DataContext is ServerItem serverItem)
+            {
+                // Проверяем, не hovering ли группа
+                if (serverItem.ParentGroup?.IsGroupHovered == true)
+                {
+                    border.Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A));
+                }
+                else
+                {
+                    border.Background = Brushes.Transparent;
+                }
+            }
+        }
+        
         private void OpenHostsButton_Click(object sender, RoutedEventArgs e)
         {
             try

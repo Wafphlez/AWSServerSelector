@@ -71,7 +71,7 @@
     <value>Select multiple AWS servers. The system will choose the best one based on latency.</value>
   </data>
   <data name="OpenHosts" xml:space="preserve">
-    <value>📝 Open Hosts</value>
+    <value>📄 Open Hosts</value>
   </data>
   <data name="ResetToDefault" xml:space="preserve">
     <value>🔄 Reset to Default</value>
@@ -80,7 +80,7 @@
     <value>🚀 Apply</value>
   </data>
   <data name="Settings" xml:space="preserve">
-    <value>Settings</value>
+    <value>⚙️ Settings</value>
   </data>
   <data name="Repository" xml:space="preserve">
     <value>Repository</value>
@@ -98,7 +98,7 @@
     <value>Reset Hosts File</value>
   </data>
   <data name="About" xml:space="preserve">
-    <value>About</value>
+    <value>ℹ️ About</value>
   </data>
   <data name="Language" xml:space="preserve">
     <value>🌐 Language</value>
@@ -224,7 +224,7 @@
     <value>China (Ningxia)</value>
   </data>
   <data name="CheckUpdates" xml:space="preserve">
-    <value>Check for Updates</value>
+    <value>🔄 Check for Updates</value>
   </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>Update Available</value>

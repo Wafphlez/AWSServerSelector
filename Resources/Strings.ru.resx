@@ -71,7 +71,7 @@
     <value>Выберите несколько серверов Dead by Daylight. Система выберет лучший на основе задержки.</value>
   </data>
   <data name="OpenHosts" xml:space="preserve">
-    <value>📝 Открыть Hosts</value>
+    <value>📄 Открыть Hosts</value>
   </data>
   <data name="ResetToDefault" xml:space="preserve">
     <value>🔄 Сбросить по умолчанию</value>
@@ -80,7 +80,7 @@
     <value>🚀 Применить</value>
   </data>
   <data name="Settings" xml:space="preserve">
-    <value>Настройки</value>
+    <value>⚙️ Настройки</value>
   </data>
   <data name="Repository" xml:space="preserve">
     <value>Репозиторий</value>
@@ -98,7 +98,7 @@
     <value>Сбросить файл Hosts</value>
   </data>
   <data name="About" xml:space="preserve">
-    <value>О программе</value>
+    <value>ℹ️ О программе</value>
   </data>
   <data name="Language" xml:space="preserve">
     <value>🌐 Язык</value>
@@ -224,7 +224,7 @@
     <value>Китай (Нинся)</value>
   </data>
   <data name="CheckUpdates" xml:space="preserve">
-    <value>Проверить обновления</value>
+    <value>🔄 Проверить обновления</value>
   </data>
   <data name="UpdateAvailable" xml:space="preserve">
     <value>Доступно обновление</value>

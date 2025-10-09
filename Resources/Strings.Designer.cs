@@ -232,6 +232,15 @@ namespace PingByDaylight.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Checking for updates....
+        /// </summary>
+        internal static string CheckingUpdates {
+            get {
+                return ResourceManager.GetString("CheckingUpdates", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Check for Updates.
         /// </summary>
         internal static string CheckUpdates {
@@ -291,6 +300,15 @@ namespace PingByDaylight.Resources {
         internal static string DiscordSupport {
             get {
                 return ResourceManager.GetString("DiscordSupport", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Download Update.
+        /// </summary>
+        internal static string DownloadUpdate {
+            get {
+                return ResourceManager.GetString("DownloadUpdate", resourceCulture);
             }
         }
         
@@ -394,6 +412,15 @@ namespace PingByDaylight.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to You have the latest version of the program..
+        /// </summary>
+        internal static string NoUpdatesAvailable {
+            get {
+                return ResourceManager.GetString("NoUpdatesAvailable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Oceania.
         /// </summary>
         internal static string Oceania {
@@ -403,7 +430,7 @@ namespace PingByDaylight.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to 📝 Open Hosts.
+        ///   Looks up a localized string similar to 📄 Open Hosts.
         /// </summary>
         internal static string OpenHosts {
             get {
@@ -507,6 +534,51 @@ namespace PingByDaylight.Resources {
         internal static string UniversalRedirect {
             get {
                 return ResourceManager.GetString("UniversalRedirect", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Update Available.
+        /// </summary>
+        internal static string UpdateAvailable {
+            get {
+                return ResourceManager.GetString("UpdateAvailable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Error checking for updates:.
+        /// </summary>
+        internal static string UpdateCheckError {
+            get {
+                return ResourceManager.GetString("UpdateCheckError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Failed to get update information..
+        /// </summary>
+        internal static string UpdateCheckFailed {
+            get {
+                return ResourceManager.GetString("UpdateCheckFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Update found, but download file is not available..
+        /// </summary>
+        internal static string UpdateDownloadUnavailable {
+            get {
+                return ResourceManager.GetString("UpdateDownloadUnavailable", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Size:.
+        /// </summary>
+        internal static string UpdateSize {
+            get {
+                return ResourceManager.GetString("UpdateSize", resourceCulture);
             }
         }
         

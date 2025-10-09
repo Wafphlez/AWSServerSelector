@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{Binding Title}" 
         Width="520" 
-        Height="240"
+        Height="280"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="#0A0A0A"
@@ -49,36 +49,50 @@
         </Style>
     </Window.Resources>
 
-    <StackPanel Margin="20">
-        <!-- Title -->
-        <TextBlock Text="{Binding AboutText}"
-                   FontSize="18"
-                   FontWeight="Bold"
-                   Foreground="White"
-                   Margin="0,0,0,10"
-                   TextWrapping="Wrap"/>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
         
-        <!-- Developer -->
-        <TextBlock Text="{Binding Developer}"
-                   FontSize="12"
-                   Foreground="LightGray"
-                   Margin="0,0,0,10"/>
+        <!-- Content -->
+        <StackPanel Grid.Row="0" Margin="25">
+            <!-- Title -->
+            <TextBlock Text="{Binding AboutText}"
+                       FontSize="18"
+                       FontWeight="Bold"
+                       Foreground="White"
+                       Margin="0,0,0,10"
+                       TextWrapping="Wrap"/>
+            
+            <!-- Developer -->
+            <TextBlock Text="{Binding Developer}"
+                       FontSize="12"
+                       Foreground="LightGray"
+                       Margin="0,0,0,10"/>
+            
+            <!-- Version -->
+            <TextBlock Text="{Binding VersionText}"
+                       FontSize="11"
+                       FontStyle="Italic"
+                       Foreground="LightGray"
+                       Margin="0,0,0,10"
+                       TextWrapping="Wrap"/>
+        </StackPanel>
         
-        <!-- Version -->
-        <TextBlock Text="{Binding VersionText}"
-                   FontSize="11"
-                   FontStyle="Italic"
-                   Foreground="LightGray"
-                   Margin="0,0,0,20"
-                   TextWrapping="Wrap"/>
-        
-        <!-- OK Button -->
-        <Button Content="{Binding AwesomeText}"
-                Width="100"
-                Height="30"
-                HorizontalAlignment="Right"
-                Style="{StaticResource ModernButton}"
-                Click="OkButton_Click"/>
-    </StackPanel>
+        <!-- Button Panel -->
+        <Border Grid.Row="1" 
+               Background="#1A1A1A" 
+               BorderBrush="#404040" 
+               BorderThickness="0,1,0,0" 
+               Padding="25,20">
+            <Button Content="{Binding AwesomeText}"
+                    Width="100"
+                    Height="30"
+                    HorizontalAlignment="Right"
+                    Style="{StaticResource ModernButton}"
+                    Click="OkButton_Click"/>
+        </Border>
+    </Grid>
 </Window>
 
