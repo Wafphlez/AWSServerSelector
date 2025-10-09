@@ -18,6 +18,8 @@ namespace AWSServerSelector
             set => SetProperty(ref _title, value);
         }
 
+        public string SettingsTitle => LocalizationManager.GetString("Settings");
+
         private string _selectedLanguage = "en";
         public string SelectedLanguage
         {
@@ -97,6 +99,7 @@ namespace AWSServerSelector
             OnPropertyChanged(nameof(MergeUnstableText));
             OnPropertyChanged(nameof(DefaultOptionsText));
             OnPropertyChanged(nameof(ApplyChangesText));
+            OnPropertyChanged(nameof(SettingsTitle));
             OnPropertyChanged(nameof(Title));
         }
 

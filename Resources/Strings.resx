@@ -59,7 +59,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AppTitle" xml:space="preserve">
-    <value>AWS Server Selector</value>
+    <value>PingByDaylight</value>
   </data>
   <data name="SelectServers" xml:space="preserve">
     <value>🌐 Select AWS Servers</value>
@@ -143,16 +143,16 @@
     <value>Awesome!</value>
   </data>
   <data name="AboutTitle" xml:space="preserve">
-    <value>About AWS Realms</value>
+    <value>About the program</value>
   </data>
   <data name="AboutText" xml:space="preserve">
-    <value>AWS Realms - AWS Server Selector</value>
+    <value>PingByDaylight - Dead by Daylight Server Selector</value>
   </data>
   <data name="Developer" xml:space="preserve">
-    <value>Developer: Ky</value>
+    <value>Developer: WAFPHLEZ</value>
   </data>
   <data name="Version" xml:space="preserve">
-    <value>Version {0}\nModern WPF interface with AWS server selection\nWindows 10 or higher recommended.</value>
+    <value>Version {0}&#x0a;Modern WPF interface with Dead by Daylight server selection&#x0a;Windows 10 or higher recommended.</value>
   </data>
   <data name="SelectAll" xml:space="preserve">
     <value>Select All</value>

@@ -10,7 +10,8 @@
         MinHeight="750" MinWidth="500"
         WindowStartupLocation="CenterScreen"
         Background="#FF0A0A0A"
-        FontFamily="Segoe UI Variable">
+        FontFamily="Segoe UI Variable"
+        Icon="Resources/icon.ico">
     
     <Window.Resources>
         <!-- Dead by Daylight Inspired Dark Theme -->

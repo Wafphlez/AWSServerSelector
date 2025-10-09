@@ -852,115 +852,27 @@ namespace AWSServerSelector
 
         private void ShowCheckUpdatesDialog()
         {
-            var updateDialog = new Window
+            var updateDialog = new UpdateDialog
             {
-                Title = "Проверить обновления",
-                Width = 400,
-                Height = 200,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                ResizeMode = ResizeMode.NoResize,
-                Background = new SolidColorBrush(Color.FromRgb(0x0A, 0x0A, 0x0A))
-            };
-
-            var panel = new StackPanel { Margin = new Thickness(20) };
-            
-            var title = new TextBlock
-            {
-                Text = "Проверка обновлений",
-                FontSize = 18,
-                FontWeight = FontWeights.Bold,
-                Foreground = Brushes.White,
-                Margin = new Thickness(0, 0, 0, 10)
+                Owner = this,
+                StatusText = "Проверяем наличие обновлений..."
             };
             
-            var status = new TextBlock
-            {
-                Text = "Проверяем наличие обновлений...",
-                FontSize = 12,
-                Foreground = Brushes.LightGray,
-                Margin = new Thickness(0, 0, 0, 20)
-            };
-            
-            var okButton = new Button
-            {
-                Content = "Закрыть",
-                Width = 100,
-                Height = 30,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Background = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)),
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(0)
-            };
-            okButton.Click += (s, e) => updateDialog.Close();
-            
-            panel.Children.Add(title);
-            panel.Children.Add(status);
-            panel.Children.Add(okButton);
-            
-            updateDialog.Content = panel;
-            updateDialog.Owner = this;
             updateDialog.ShowDialog();
         }
 
         private void ShowAboutDialog()
         {
-            var about = new Window
+            var about = new AboutDialog
             {
+                Owner = this,
                 Title = LocalizationManager.GetString("AboutTitle"),
-                Width = 500,
-                Height = 220,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                ResizeMode = ResizeMode.NoResize,
-                Background = new SolidColorBrush(Color.FromRgb(0x0A, 0x0A, 0x0A))
-            };
-
-            var panel = new StackPanel { Margin = new Thickness(20) };
-            
-            var title = new TextBlock
-            {
-                Text = LocalizationManager.GetString("AboutText"),
-                FontSize = 18,
-                FontWeight = FontWeights.Bold,
-                Foreground = Brushes.White,
-                Margin = new Thickness(0, 0, 0, 10)
+                AboutText = LocalizationManager.GetString("AboutText"),
+                Developer = LocalizationManager.GetString("Developer"),
+                VersionText = LocalizationManager.GetString("Version", CurrentVersion),
+                AwesomeText = LocalizationManager.GetString("Awesome")
             };
             
-            var developer = new TextBlock
-            {
-                Text = LocalizationManager.GetString("Developer"),
-                FontSize = 12,
-                Foreground = Brushes.LightGray,
-                Margin = new Thickness(0, 0, 0, 10)
-            };
-            
-            var version = new TextBlock
-            {
-                Text = LocalizationManager.GetString("Version", CurrentVersion),
-                FontSize = 11,
-                FontStyle = FontStyles.Italic,
-                Foreground = Brushes.LightGray,
-                Margin = new Thickness(0, 0, 0, 20)
-            };
-            
-            var okButton = new Button
-            {
-                Content = LocalizationManager.GetString("Awesome"),
-                Width = 100,
-                Height = 30,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Background = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)),
-                Foreground = Brushes.White,
-                BorderThickness = new Thickness(0)
-            };
-            okButton.Click += (s, e) => about.Close();
-            
-            panel.Children.Add(title);
-            panel.Children.Add(developer);
-            panel.Children.Add(version);
-            panel.Children.Add(okButton);
-            
-            about.Content = panel;
-            about.Owner = this;
             about.ShowDialog();
         }
 

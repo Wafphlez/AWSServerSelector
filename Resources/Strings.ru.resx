@@ -59,16 +59,16 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AppTitle" xml:space="preserve">
-    <value>Селектор AWS Серверов</value>
+    <value>PingByDaylight</value>
   </data>
   <data name="SelectServers" xml:space="preserve">
-    <value>🌐 Выберите AWS Серверы</value>
+    <value>🌐 Серверы Dead by Daylight</value>
   </data>
   <data name="Latency" xml:space="preserve">
     <value>⚡ Задержка</value>
   </data>
   <data name="StatusText" xml:space="preserve">
-    <value>Выберите несколько AWS серверов. Система выберет лучший на основе задержки.</value>
+    <value>Выберите несколько серверов Dead by Daylight. Система выберет лучший на основе задержки.</value>
   </data>
   <data name="OpenHosts" xml:space="preserve">
     <value>📝 Открыть Hosts</value>
@@ -143,16 +143,16 @@
     <value>Отлично!</value>
   </data>
   <data name="AboutTitle" xml:space="preserve">
-    <value>О AWS Realms</value>
+    <value>О программе</value>
   </data>
   <data name="AboutText" xml:space="preserve">
-    <value>AWS Realms - Селектор AWS Серверов</value>
+    <value>PingByDaylight - Выбор Серверов Dead by Daylight</value>
   </data>
   <data name="Developer" xml:space="preserve">
-    <value>Разработчик: Ky</value>
+    <value>Разработчик: WAFPHLEZ</value>
   </data>
   <data name="Version" xml:space="preserve">
-    <value>Версия {0}\nСовременный WPF интерфейс с выбором AWS серверов\nРекомендуется Windows 10 или выше.</value>
+    <value>Версия {0}&#x0a;Современный WPF интерфейс с выбором серверов Dead by Daylight&#x0a;Рекомендуется Windows 10 или выше.</value>
   </data>
   <data name="SelectAll" xml:space="preserve">
     <value>Выбрать все</value>

@@ -6,11 +6,17 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <AssemblyTitle>AWS Server Selector</AssemblyTitle>
-    <AssemblyDescription>AWS Server Selector - WPF Version</AssemblyDescription>
+    <AssemblyTitle>PingByDaylight</AssemblyTitle>
+    <AssemblyDescription>PingByDaylight - Dead by Daylight Server Selector</AssemblyDescription>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
+    <!-- Настройки локализации для исключения ненужных языков -->
+    <SatelliteResourceLanguages>en;ru</SatelliteResourceLanguages>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <!-- Настройки манифеста для запуска от администратора -->
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +32,10 @@
     <EmbeddedResource Include="Resources\Strings.ru.resx">
       <DependentUpon>Strings.resx</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\icon.ico" />
   </ItemGroup>
 
 
