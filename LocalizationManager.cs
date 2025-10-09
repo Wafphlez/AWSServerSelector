@@ -13,7 +13,7 @@ namespace AWSServerSelector
 
         static LocalizationManager()
         {
-            _resourceManager = new ResourceManager("AWSServerSelector.Resources.Strings", typeof(LocalizationManager).Assembly);
+            _resourceManager = new ResourceManager("PingByDaylight.Resources.Strings", typeof(LocalizationManager).Assembly);
             _currentCulture = CultureInfo.CurrentCulture;
         }
 

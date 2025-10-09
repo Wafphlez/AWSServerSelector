@@ -10,6 +10,8 @@
     <AssemblyDescription>PingByDaylight - Dead by Daylight Server Selector</AssemblyDescription>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
     <FileVersion>1.0.0.0</FileVersion>
+    <AssemblyName>PingByDaylight</AssemblyName>
+    <RootNamespace>PingByDaylight</RootNamespace>
     <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
     <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
     <!-- Настройки локализации для исключения ненужных языков -->
@@ -36,6 +38,14 @@
 
   <ItemGroup>
     <Resource Include="Resources\icon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Resources\Strings.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Strings.resx</DependentUpon>
+    </Compile>
   </ItemGroup>
 
 
