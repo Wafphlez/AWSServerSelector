@@ -30,10 +30,10 @@ namespace AWSServerSelector
     {
         #region Constants and Fields
         
-        private const string RepoUrl = "https://codeberg.org/ky/make-your-choice";
-        private const string WebsiteUrl = "https://kurocat.net";
-        private const string DiscordUrl = "https://discord.gg/gnvtATeVc4";
-        private const string CurrentVersion = "1.0.0";
+        private const string RepoUrl = "https://github.com/Wafphlez/AWSServerSelector";
+        private const string WebsiteUrl = "https://github.com/Wafphlez/AWSServerSelectorwafphlez";
+        private const string DiscordUrl = "https://github.com/Wafphlez/AWSServerSelectorgnvtATeVc4";
+        private const string CurrentVersion = "1.0.1";
         
         // Holds endpoint list and stability flag for each region
         private record RegionInfo(string[] Hosts, bool Stable);
