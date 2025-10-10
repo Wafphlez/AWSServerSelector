@@ -1783,5 +1783,25 @@ namespace AWSServerSelector
                     MessageBoxImage.Error);
             }
         }
+
+        private void ConnectionInfo_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var connectionWindow = new ConnectionInfoWindow
+                {
+                    Owner = this
+                };
+                connectionWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Не удалось открыть окно информации о подключении: {ex.Message}",
+                    "Ошибка",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
     }
 }

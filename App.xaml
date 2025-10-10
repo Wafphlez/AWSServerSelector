@@ -58,7 +58,7 @@
                     <WindowChrome CaptionHeight="35"
                                  ResizeBorderThickness="5"
                                  GlassFrameThickness="0"
-                                 CornerRadius="0"
+                                 CornerRadius="12"
                                  UseAeroCaptionButtons="False"/>
                 </Setter.Value>
             </Setter>
@@ -67,7 +67,8 @@
                     <ControlTemplate TargetType="Window">
                         <Border Background="{TemplateBinding Background}" 
                                BorderBrush="#FF1A1A1A" 
-                               BorderThickness="1">
+                               BorderThickness="1"
+                               CornerRadius="12">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="35"/>
@@ -128,7 +129,7 @@
                     <WindowChrome CaptionHeight="35"
                                  ResizeBorderThickness="5"
                                  GlassFrameThickness="0"
-                                 CornerRadius="0"
+                                 CornerRadius="12"
                                  UseAeroCaptionButtons="False"/>
                 </Setter.Value>
             </Setter>
@@ -137,7 +138,8 @@
                     <ControlTemplate TargetType="Window">
                         <Border Background="{TemplateBinding Background}" 
                                BorderBrush="#FF1A1A1A" 
-                               BorderThickness="1">
+                               BorderThickness="1"
+                               CornerRadius="12">
                             <Grid>
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="35"/>
