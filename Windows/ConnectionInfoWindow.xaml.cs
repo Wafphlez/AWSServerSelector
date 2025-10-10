@@ -51,6 +51,7 @@ namespace AWSServerSelector
             InitializeComponent();
             Loaded += ConnectionInfoWindow_Loaded;
             Closing += ConnectionInfoWindow_Closing;
+            LocalizationManager.LanguageChanged += OnLanguageChanged;
         }
 
         #endregion
@@ -79,6 +80,7 @@ namespace AWSServerSelector
             StopPingMonitoring();
             _udpMonitor?.Dispose();
             _udpMonitor = null;
+            LocalizationManager.LanguageChanged -= OnLanguageChanged;
         }
 
         #endregion
@@ -574,7 +576,7 @@ namespace AWSServerSelector
                 
                 Debug.WriteLine($"🌍 AWS Region lookup для {connection.RemoteAddress}: region={region}, service={service}");
                 
-                if (region != "Неизвестный" && region != "Unknown")
+                if (!string.IsNullOrEmpty(region))
                 {
                     connection.Region = FormatRegion(region);
                     connection.ServerName = $"{service} - {region}";
@@ -588,21 +590,21 @@ namespace AWSServerSelector
                     if (!string.IsNullOrEmpty(regionName))
                     {
                         connection.Region = regionName;
-                        connection.ServerName = $"Сервер - {regionName}";
+                        connection.ServerName = $"{LocalizationManager.ServerPrefix}{regionName}";
                         Debug.WriteLine($"✅ Регион определен через ip-api: {regionName}");
                     }
                     else
                     {
-                        connection.Region = "Неизвестный регион";
-                        connection.ServerName = $"Сервер {connection.RemoteAddress}";
+                        connection.Region = LocalizationManager.UnknownRegion;
+                        connection.ServerName = LocalizationManager.GetString("ServerIP", connection.RemoteAddress);
                     }
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"❌ Ошибка определения региона: {ex.Message}");
-                connection.Region = "Неизвестный регион";
-                connection.ServerName = $"Сервер {connection.RemoteAddress}";
+                connection.Region = LocalizationManager.UnknownRegion;
+                connection.ServerName = LocalizationManager.GetString("ServerIP", connection.RemoteAddress);
             }
 
             return connection;
@@ -1008,7 +1010,7 @@ namespace AWSServerSelector
             {
                 Debug.WriteLine($"   TCP: {tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}, Region={tcpConnection.Region}, Ping={tcpConnection.Ping}ms");
                 
-                LobbyStatusText.Text = "Подключено";
+                LobbyStatusText.Text = LocalizationManager.Connected;
                 LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // Green
                 
                 LobbyIpText.Text = $"{tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}";
@@ -1019,22 +1021,22 @@ namespace AWSServerSelector
                 
                 LobbyPingText.Text = tcpConnection.Ping >= 0 
                     ? $"{tcpConnection.Ping} ms" 
-                    : "Не измерен";
+                    : LocalizationManager.NotMeasured;
                 LobbyPingText.Foreground = GetPingColor(tcpConnection.Ping);
                 
                 Debug.WriteLine($"   ✅ UI лобби обновлен");
             }
             else
             {
-                LobbyStatusText.Text = "Не подключено";
+                LobbyStatusText.Text = LocalizationManager.NotConnected;
                 LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
                 
-                LobbyIpText.Text = "Не определен";
+                LobbyIpText.Text = LocalizationManager.NotDetermined;
                 CopyLobbyIpButton.Visibility = Visibility.Collapsed;
                 
-                LobbyServerText.Text = "Не определен";
-                LobbyRegionText.Text = "Не определен";
-                LobbyPingText.Text = "Не измерен";
+                LobbyServerText.Text = LocalizationManager.NotDetermined;
+                LobbyRegionText.Text = LocalizationManager.NotDetermined;
+                LobbyPingText.Text = LocalizationManager.NotMeasured;
                 LobbyPingText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
                 
                 Debug.WriteLine($"   ⚠️ TCP отсутствует, показываем 'Не подключено'");
@@ -1047,7 +1049,7 @@ namespace AWSServerSelector
             // Обновляем UDP (игра)
             if (udpConnection != null)
             {
-                GameStatusText.Text = "Подключено";
+                GameStatusText.Text = LocalizationManager.Connected;
                 GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // Green
                 
                 GameIpText.Text = $"{udpConnection.RemoteAddress}:{udpConnection.RemotePort}";
@@ -1081,7 +1083,7 @@ namespace AWSServerSelector
                     }
                     else
                     {
-                        GamePingText.Text = "Измеряется...";
+                        GamePingText.Text = LocalizationManager.Measuring;
                         GamePingText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Yellow
                     }
                     
@@ -1100,15 +1102,15 @@ namespace AWSServerSelector
                 // Нет UDP соединения - сбрасываем статус игры
                 Debug.WriteLine("⚠️ UDP соединение не найдено - сбрасываем статус игры");
                 
-                GameStatusText.Text = "Не подключено";
+                GameStatusText.Text = LocalizationManager.NotConnected;
                 GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
                 
-                GameIpText.Text = "Не определен";
+                GameIpText.Text = LocalizationManager.NotDetermined;
                 CopyGameIpButton.Visibility = Visibility.Collapsed;
                 
-                GameServerText.Text = "Не определен";
-                GameRegionText.Text = "Не определен";
-                GamePingText.Text = "Не измерен";
+                GameServerText.Text = LocalizationManager.NotDetermined;
+                GameRegionText.Text = LocalizationManager.NotDetermined;
+                GamePingText.Text = LocalizationManager.NotMeasured;
                 GamePingText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
                 
                 // Сбрасываем сохраненный IP игры
@@ -1124,21 +1126,21 @@ namespace AWSServerSelector
 
         private void UpdateNoConnection()
         {
-            LobbyStatusText.Text = "Игра не запущена";
+            LobbyStatusText.Text = LocalizationManager.GameNotRunning;
             LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)); // Gray
-            LobbyIpText.Text = "Не определен";
+            LobbyIpText.Text = LocalizationManager.NotDetermined;
             CopyLobbyIpButton.Visibility = Visibility.Collapsed;
-            LobbyServerText.Text = "Не определен";
-            LobbyRegionText.Text = "Не определен";
-            LobbyPingText.Text = "Не измерен";
+            LobbyServerText.Text = LocalizationManager.NotDetermined;
+            LobbyRegionText.Text = LocalizationManager.NotDetermined;
+            LobbyPingText.Text = LocalizationManager.NotMeasured;
 
-            GameStatusText.Text = "Игра не запущена";
+            GameStatusText.Text = LocalizationManager.GameNotRunning;
             GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)); // Gray
-            GameIpText.Text = "Не определен";
+            GameIpText.Text = LocalizationManager.NotDetermined;
             CopyGameIpButton.Visibility = Visibility.Collapsed;
-            GameServerText.Text = "Не определен";
-            GameRegionText.Text = "Не определен";
-            GamePingText.Text = "Не измерен";
+            GameServerText.Text = LocalizationManager.NotDetermined;
+            GameRegionText.Text = LocalizationManager.NotDetermined;
+            GamePingText.Text = LocalizationManager.NotMeasured;
             
             // Сбрасываем сохраненные IP
             _lastLobbyIp = null;
@@ -1408,7 +1410,7 @@ namespace AWSServerSelector
             {
                 var text = $"{_currentLobbyConnection.RemoteAddress}:{_currentLobbyConnection.RemotePort}";
                 Clipboard.SetText(text);
-                ShowCopyNotification("Лобби IP скопирован в буфер обмена");
+                ShowCopyNotification(LocalizationManager.LobbyCopied);
             }
         }
 
@@ -1418,7 +1420,7 @@ namespace AWSServerSelector
             {
                 var text = $"{_currentGameConnection.RemoteAddress}:{_currentGameConnection.RemotePort}";
                 Clipboard.SetText(text);
-                ShowCopyNotification("IP матча скопирован в буфер обмена");
+                ShowCopyNotification(LocalizationManager.MatchCopied);
             }
         }
 
@@ -1437,6 +1439,21 @@ namespace AWSServerSelector
                     LastUpdateText.Foreground = new SolidColorBrush(Colors.White);
                 });
             });
+        }
+
+        #endregion
+
+        #region Language Change Handler
+
+        private void OnLanguageChanged(object? sender, EventArgs e)
+        {
+            // Update window title
+            Title = LocalizationManager.ConnectionInfoTitle;
+            
+            // Note: Static bindings {x:Static} in XAML don't auto-update when language changes.
+            // The dynamic text elements (status, IP, etc.) will be updated on the next monitoring cycle
+            // through UpdateUIAsync, UpdateNoConnection, etc.
+            // For full language switching support, the window would need to be recreated.
         }
 
         #endregion

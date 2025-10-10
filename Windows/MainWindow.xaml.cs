@@ -33,7 +33,7 @@ namespace AWSServerSelector
         private const string RepoUrl = "https://github.com/Wafphlez/AWSServerSelector";
         private const string WebsiteUrl = "https://github.com/Wafphlez/AWSServerSelector";
         private const string DiscordUrl = "https://github.com/Wafphlez/AWSServerSelector";
-        private const string CurrentVersion = "1.0.2";
+        private const string CurrentVersion = "1.0.3";
         
         // Holds endpoint list and stability flag for each region
         private record RegionInfo(string[] Hosts, bool Stable);
@@ -952,6 +952,12 @@ namespace AWSServerSelector
             if (openHostsMenuItem != null)
             {
                 openHostsMenuItem.Header = LocalizationManager.GetString("OpenHosts");
+            }
+            
+            var connectionInfoMenuItem = this.FindName("ConnectionInfoMenuItem") as MenuItem;
+            if (connectionInfoMenuItem != null)
+            {
+                connectionInfoMenuItem.Header = LocalizationManager.GetString("ConnectionInfo");
             }
             
             var revertButton = this.FindName("RevertButton") as Button;

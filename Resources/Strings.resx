@@ -59,7 +59,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AppTitle" xml:space="preserve">
-    <value>PingByDaylight</value>
+    <value>Ping by Daylight</value>
   </data>
   <data name="SelectServers" xml:space="preserve">
     <value>🌐 Select AWS Servers</value>
@@ -255,5 +255,92 @@
   </data>
   <data name="LatestVersion" xml:space="preserve">
     <value>Latest version:</value>
+  </data>
+  <data name="ConnectionInfo" xml:space="preserve">
+    <value>🌐 Connection Info</value>
+  </data>
+  <data name="ConnectionInfoTitle" xml:space="preserve">
+    <value>Connection Info - Dead by Daylight</value>
+  </data>
+  <data name="ConnectionInfoHeader" xml:space="preserve">
+    <value>Connection Info</value>
+  </data>
+  <data name="ConnectionInfoDescription" xml:space="preserve">
+    <value>Monitoring active connection to Dead by Daylight server</value>
+  </data>
+  <data name="LobbyConnectionStatus" xml:space="preserve">
+    <value>Lobby Connection Status</value>
+  </data>
+  <data name="MatchConnectionStatus" xml:space="preserve">
+    <value>Match Connection Status</value>
+  </data>
+  <data name="Status" xml:space="preserve">
+    <value>Status:</value>
+  </data>
+  <data name="IPPort" xml:space="preserve">
+    <value>IP:Port:</value>
+  </data>
+  <data name="Server" xml:space="preserve">
+    <value>Server:</value>
+  </data>
+  <data name="ServerPrefix" xml:space="preserve">
+    <value>Server - </value>
+  </data>
+  <data name="UnknownRegion" xml:space="preserve">
+    <value>Unknown Region</value>
+  </data>
+  <data name="ServerIP" xml:space="preserve">
+    <value>Server {0}</value>
+  </data>
+  <data name="Ping" xml:space="preserve">
+    <value>Ping:</value>
+  </data>
+  <data name="Region" xml:space="preserve">
+    <value>Region:</value>
+  </data>
+  <data name="Connected" xml:space="preserve">
+    <value>Connected</value>
+  </data>
+  <data name="NotConnected" xml:space="preserve">
+    <value>Not Connected</value>
+  </data>
+  <data name="GameNotRunning" xml:space="preserve">
+    <value>Game Not Running</value>
+  </data>
+  <data name="NotDetermined" xml:space="preserve">
+    <value>Not Determined</value>
+  </data>
+  <data name="NotMeasured" xml:space="preserve">
+    <value>Not Measured</value>
+  </data>
+  <data name="Measuring" xml:space="preserve">
+    <value>Measuring...</value>
+  </data>
+  <data name="LastUpdate" xml:space="preserve">
+    <value>Last Update</value>
+  </data>
+  <data name="Initializing" xml:space="preserve">
+    <value>Initializing...</value>
+  </data>
+  <data name="Instructions" xml:space="preserve">
+    <value>Instructions</value>
+  </data>
+  <data name="InstructionsText" xml:space="preserve">
+    <value>1. Launch Dead by Daylight and join a lobby
+2. The window will automatically detect the IP address and server you are connected to
+3. Information will be updated in real time
+4. More accurate detection may take a few seconds</value>
+  </data>
+  <data name="Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="LobbyCopied" xml:space="preserve">
+    <value>Lobby IP copied to clipboard</value>
+  </data>
+  <data name="MatchCopied" xml:space="preserve">
+    <value>Match IP copied to clipboard</value>
   </data>
 </root>

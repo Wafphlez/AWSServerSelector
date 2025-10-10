@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AWSServerSelector"
         mc:Ignorable="d"
-        Title="Мониторинг подключения" 
+        Title="{x:Static local:LocalizationManager.ConnectionInfoTitle}" 
         Height="750" Width="500"
         MinHeight="400" MinWidth="500"
         WindowStartupLocation="Manual"
@@ -274,13 +274,13 @@
                               FontWeight="Normal" 
                               Foreground="White"
                               Style="{StaticResource ClearTextBlock}"/>
-                    <TextBlock Text=" Мониторинг подключения" 
+                    <TextBlock Text="{x:Static local:LocalizationManager.ConnectionInfoHeader}" 
                               FontSize="24" 
                               FontWeight="Bold" 
                               Foreground="White"
                               Style="{StaticResource ClearTextBlock}"/>
                 </StackPanel>
-                <TextBlock Text="Мониторинг активного подключения к серверу Dead by Daylight" 
+                <TextBlock Text="{x:Static local:LocalizationManager.ConnectionInfoDescription}" 
                           FontSize="14" 
                           Foreground="#FFE0E0E0"
                           HorizontalAlignment="Center"
@@ -314,7 +314,7 @@
                                           FontWeight="Normal" 
                                           Foreground="{StaticResource TextBrush}"
                                           Style="{StaticResource ClearTextBlock}"/>
-                                <TextBlock Text=" Статус подключения к лобби" 
+                                <TextBlock Text="{x:Static local:LocalizationManager.LobbyConnectionStatus}" 
                                           FontSize="16" 
                                           FontWeight="SemiBold" 
                                           Foreground="{StaticResource TextBrush}"
@@ -334,21 +334,21 @@
                                 </Grid.RowDefinitions>
                                 
                                 <TextBlock Grid.Row="0" Grid.Column="0" 
-                                          Text="Статус:" 
+                                          Text="{x:Static local:LocalizationManager.Status}" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 <TextBlock x:Name="LobbyStatusText" 
                                           Grid.Row="0" Grid.Column="1" 
-                                          Text="Не подключено" 
+                                          Text="{x:Static local:LocalizationManager.NotConnected}" 
                                           Foreground="{StaticResource ErrorBrush}"
                                           FontWeight="SemiBold"
                                           Margin="0,0,0,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 
                                 <TextBlock Grid.Row="1" Grid.Column="0" 
-                                          Text="IP:Порт:" 
+                                          Text="{x:Static local:LocalizationManager.IPPort}" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
@@ -360,7 +360,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock x:Name="LobbyIpText" 
                                               Grid.Column="0"
-                                              Text="Не определен" 
+                                              Text="{x:Static local:LocalizationManager.NotDetermined}" 
                                               Foreground="{StaticResource TextBrush}"
                                               FontWeight="SemiBold"
                                               VerticalAlignment="Center"
@@ -378,42 +378,42 @@
                                 </Grid>
                                 
                                 <TextBlock Grid.Row="2" Grid.Column="0" 
-                                          Text="Сервер:" 
+                                          Text="{x:Static local:LocalizationManager.Server}" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 <TextBlock x:Name="LobbyServerText" 
                                           Grid.Row="2" Grid.Column="1" 
-                                          Text="Не определен" 
+                                          Text="{x:Static local:LocalizationManager.NotDetermined}" 
                                           Foreground="{StaticResource TextBrush}"
                                           FontWeight="SemiBold"
                                           Margin="0,0,0,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 
                                 <TextBlock Grid.Row="3" Grid.Column="0" 
-                                          Text="Пинг:" 
+                                          Text="{x:Static local:LocalizationManager.Ping}" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 <TextBlock x:Name="LobbyPingText" 
                                           Grid.Row="3" Grid.Column="1" 
-                                          Text="Не измерен" 
+                                          Text="{x:Static local:LocalizationManager.NotMeasured}" 
                                           Foreground="{StaticResource TextBrush}"
                                           FontWeight="SemiBold"
                                           Margin="0,0,0,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 
                                 <TextBlock Grid.Row="4" Grid.Column="0" 
-                                          Text="Регион:" 
+                                          Text="{x:Static local:LocalizationManager.Region}" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,0"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 <TextBlock x:Name="LobbyRegionText" 
                                           Grid.Row="4" Grid.Column="1" 
-                                          Text="Не определен" 
+                                          Text="{x:Static local:LocalizationManager.NotDetermined}" 
                                           Foreground="{StaticResource TextBrush}"
                                           FontWeight="SemiBold"
                                           Style="{StaticResource ClearTextBlock}"/>
@@ -433,7 +433,7 @@
                                           FontWeight="Normal" 
                                           Foreground="{StaticResource TextBrush}"
                                           Style="{StaticResource ClearTextBlock}"/>
-                                <TextBlock Text=" Статус подключения к матчу" 
+                                <TextBlock Text="{x:Static local:LocalizationManager.MatchConnectionStatus}" 
                                           FontSize="16" 
                                           FontWeight="SemiBold" 
                                           Foreground="{StaticResource TextBrush}"
@@ -453,21 +453,21 @@
                                 </Grid.RowDefinitions>
                                 
                                 <TextBlock Grid.Row="0" Grid.Column="0" 
-                                          Text="Статус:" 
+                                          Text="{x:Static local:LocalizationManager.Status}" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 <TextBlock x:Name="GameStatusText" 
                                           Grid.Row="0" Grid.Column="1" 
-                                          Text="Не подключено" 
+                                          Text="{x:Static local:LocalizationManager.NotConnected}" 
                                           Foreground="{StaticResource ErrorBrush}"
                                           FontWeight="SemiBold"
                                           Margin="0,0,0,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 
                                 <TextBlock Grid.Row="1" Grid.Column="0" 
-                                          Text="IP:Порт:" 
+                                          Text="{x:Static local:LocalizationManager.IPPort}" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
@@ -479,7 +479,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock x:Name="GameIpText" 
                                               Grid.Column="0"
-                                              Text="Не определен" 
+                                              Text="{x:Static local:LocalizationManager.NotDetermined}" 
                                               Foreground="{StaticResource TextBrush}"
                                               FontWeight="SemiBold"
                                               VerticalAlignment="Center"
@@ -497,42 +497,42 @@
                                 </Grid>
                                 
                                 <TextBlock Grid.Row="2" Grid.Column="0" 
-                                          Text="Сервер:" 
+                                          Text="{x:Static local:LocalizationManager.Server}" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 <TextBlock x:Name="GameServerText" 
                                           Grid.Row="2" Grid.Column="1" 
-                                          Text="Не определен" 
+                                          Text="{x:Static local:LocalizationManager.NotDetermined}" 
                                           Foreground="{StaticResource TextBrush}"
                                           FontWeight="SemiBold"
                                           Margin="0,0,0,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 
                                 <TextBlock Grid.Row="3" Grid.Column="0" 
-                                          Text="Пинг:" 
+                                          Text="{x:Static local:LocalizationManager.Ping}" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 <TextBlock x:Name="GamePingText" 
                                           Grid.Row="3" Grid.Column="1" 
-                                          Text="Не измерен" 
+                                          Text="{x:Static local:LocalizationManager.NotMeasured}" 
                                           Foreground="{StaticResource TextBrush}"
                                           FontWeight="SemiBold"
                                           Margin="0,0,0,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 
                                 <TextBlock Grid.Row="4" Grid.Column="0" 
-                                          Text="Регион:" 
+                                          Text="{x:Static local:LocalizationManager.Region}" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,0"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 <TextBlock x:Name="GameRegionText" 
                                           Grid.Row="4" Grid.Column="1" 
-                                          Text="Не определен" 
+                                          Text="{x:Static local:LocalizationManager.NotDetermined}" 
                                           Foreground="{StaticResource TextBrush}"
                                           FontWeight="SemiBold"
                                           Style="{StaticResource ClearTextBlock}"/>
@@ -552,14 +552,14 @@
                                           FontWeight="Normal" 
                                           Foreground="{StaticResource TextBrush}"
                                           Style="{StaticResource ClearTextBlock}"/>
-                                <TextBlock Text=" Последнее обновление" 
+                                <TextBlock Text="{x:Static local:LocalizationManager.LastUpdate}" 
                                           FontSize="16" 
                                           FontWeight="SemiBold" 
                                           Foreground="{StaticResource TextBrush}"
                                           Style="{StaticResource ClearTextBlock}"/>
                             </StackPanel>
                             <TextBlock x:Name="LastUpdateText" 
-                                      Text="Инициализация..." 
+                                      Text="{x:Static local:LocalizationManager.Initializing}" 
                                       Foreground="{StaticResource TextBrush}"
                                       FontWeight="SemiBold"
                                       Style="{StaticResource ClearTextBlock}"/>
@@ -571,25 +571,19 @@
                             CornerRadius="8" 
                             Padding="15">
                         <StackPanel>
-                            <TextBlock Text="💡 Инструкции" 
-                                      FontSize="16" 
+                            <TextBlock FontSize="16" 
                                       FontWeight="SemiBold" 
                                       Foreground="{StaticResource TextBrush}"
                                       Margin="0,0,0,10"
-                                      Style="{StaticResource ClearTextBlock}"/>
-                            <TextBlock TextWrapping="Wrap" 
+                                      Style="{StaticResource ClearTextBlock}">
+                                <Run Text="💡 "/><Run Text="{x:Static local:LocalizationManager.Instructions}"/>
+                            </TextBlock>
+                            <TextBlock Text="{x:Static local:LocalizationManager.InstructionsText}"
+                                      TextWrapping="Wrap" 
                                       Foreground="{StaticResource SubTextBrush}"
                                       FontSize="13"
                                       LineHeight="18"
-                                      Style="{StaticResource ClearTextBlock}">
-                                <Run Text="1. Запустите Dead by Daylight и присоединитесь к лобби"/>
-                                <LineBreak/>
-                                <Run Text="2. Окно автоматически определит IP адрес и сервер, к которому вы подключены"/>
-                                <LineBreak/>
-                                <Run Text="3. Информация будет обновляться в реальном времени"/>
-                                <LineBreak/>
-                                <Run Text="4. Для более точного определения может потребоваться несколько секунд"/>
-                            </TextBlock>
+                                      Style="{StaticResource ClearTextBlock}"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -605,14 +599,20 @@
                 Margin="0">
              <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                  <Button x:Name="RefreshButton" 
-                        Content="🔄 Обновить" 
                         Style="{StaticResource SecondaryButton}"
                         Margin="0,0,15,0"
-                        Click="RefreshButton_Click"/>
+                        Click="RefreshButton_Click">
+                     <TextBlock>
+                         <Run Text="🔄 "/><Run Text="{x:Static local:LocalizationManager.Refresh}"/>
+                     </TextBlock>
+                 </Button>
                  <Button x:Name="CloseButton" 
-                        Content="✕ Закрыть" 
                         Style="{StaticResource ModernButton}"
-                        Click="CloseButton_Click"/>
+                        Click="CloseButton_Click">
+                     <TextBlock>
+                         <Run Text="✕ "/><Run Text="{x:Static local:LocalizationManager.Close}"/>
+                     </TextBlock>
+                 </Button>
              </StackPanel>
         </Border>
     </Grid>

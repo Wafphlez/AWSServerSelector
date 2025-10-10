@@ -70,7 +70,7 @@ namespace AWSServerSelector
             await EnsureIpRangesLoadedAsync();
             
             if (!IPAddress.TryParse(ip, out var address))
-                return "Неизвестный";
+                return string.Empty;
 
             foreach (var range in _ipRanges)
             {
@@ -80,7 +80,7 @@ namespace AWSServerSelector
                 }
             }
 
-            return "Неизвестный";
+            return string.Empty;
         }
 
         public async Task<string> GetAwsServiceAsync(string ip)
@@ -88,7 +88,7 @@ namespace AWSServerSelector
             await EnsureIpRangesLoadedAsync();
             
             if (!IPAddress.TryParse(ip, out var address))
-                return "Неизвестный";
+                return string.Empty;
 
             foreach (var range in _ipRanges)
             {
@@ -98,7 +98,7 @@ namespace AWSServerSelector
                 }
             }
 
-            return "Неизвестный";
+            return string.Empty;
         }
 
         private async Task EnsureIpRangesLoadedAsync()

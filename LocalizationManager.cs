@@ -41,6 +41,35 @@ namespace AWSServerSelector
         public static string Oceania => GetString("Oceania");
         public static string China => GetString("China");
         public static string CheckUpdates => GetString("CheckUpdates");
+        
+        // Connection Info Window
+        public static string ConnectionInfo => GetString("ConnectionInfo");
+        public static string ConnectionInfoTitle => GetString("ConnectionInfoTitle");
+        public static string ConnectionInfoHeader => GetString("ConnectionInfoHeader");
+        public static string ConnectionInfoDescription => GetString("ConnectionInfoDescription");
+        public static string LobbyConnectionStatus => GetString("LobbyConnectionStatus");
+        public static string MatchConnectionStatus => GetString("MatchConnectionStatus");
+        public static string Status => GetString("Status");
+        public static string IPPort => GetString("IPPort");
+        public static string Server => GetString("Server");
+        public static string ServerPrefix => GetString("ServerPrefix");
+        public static string UnknownRegion => GetString("UnknownRegion");
+        public static string Ping => GetString("Ping");
+        public static string Region => GetString("Region");
+        public static string Connected => GetString("Connected");
+        public static string NotConnected => GetString("NotConnected");
+        public static string GameNotRunning => GetString("GameNotRunning");
+        public static string NotDetermined => GetString("NotDetermined");
+        public static string NotMeasured => GetString("NotMeasured");
+        public static string Measuring => GetString("Measuring");
+        public static string LastUpdate => GetString("LastUpdate");
+        public static string Initializing => GetString("Initializing");
+        public static string Instructions => GetString("Instructions");
+        public static string InstructionsText => GetString("InstructionsText");
+        public static string Refresh => GetString("Refresh");
+        public static string Close => GetString("Close");
+        public static string LobbyCopied => GetString("LobbyCopied");
+        public static string MatchCopied => GetString("MatchCopied");
 
         public static string GetString(string key)
         {
