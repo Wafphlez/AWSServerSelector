@@ -148,8 +148,10 @@
 
 ### Структура hosts файла
 
+#### 🔒 Gatekeep Mode (Рекомендуется)
+
 ```hosts
-# --+ Make Your Choice +--
+# -- Ping by Daylight --
 # Edited by Ping by Daylight
 # Unselected servers are blocked (Gatekeep Mode)
 
