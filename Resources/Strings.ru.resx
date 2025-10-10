@@ -250,4 +250,10 @@
   <data name="UpdateCheckError" xml:space="preserve">
     <value>Ошибка при проверке обновлений:</value>
   </data>
+  <data name="YourVersion" xml:space="preserve">
+    <value>Ваша версия:</value>
+  </data>
+  <data name="LatestVersion" xml:space="preserve">
+    <value>Актуальная версия:</value>
+  </data>
 </root>

@@ -15,6 +15,8 @@ namespace AWSServerSelector
         private string _updateDescription = "";
         private string _updateSize = "";
         private string _downloadUrl = "";
+        private string _yourVersionText = "";
+        private string _latestVersionText = "";
 
         public string StatusText 
         { 
@@ -56,14 +58,55 @@ namespace AWSServerSelector
             } 
         }
 
+        public string YourVersionText 
+        { 
+            get => _yourVersionText; 
+            set 
+            { 
+                _yourVersionText = value; 
+                OnPropertyChanged(nameof(YourVersionText)); 
+            } 
+        }
+
+        public string LatestVersionText 
+        { 
+            get => _latestVersionText; 
+            set 
+            { 
+                _latestVersionText = value; 
+                OnPropertyChanged(nameof(LatestVersionText)); 
+            } 
+        }
+
         public UpdateDialog()
         {
             InitializeComponent();
             DataContext = this;
+            
+            // Инициализируем актуальную версию как "загрузка..."
+            var latestVersionLabel = LocalizationManager.GetString("LatestVersion") ?? "Latest version:";
+            var checkingText = LocalizationManager.GetString("CheckingUpdates") ?? "Checking for updates...";
+            LatestVersionText = $"{latestVersionLabel} {checkingText}";
+            
+            // Отладочная информация
+            System.Diagnostics.Debug.WriteLine($"UpdateDialog - Constructor initialization:");
+            System.Diagnostics.Debug.WriteLine($"  Label: '{latestVersionLabel}'");
+            System.Diagnostics.Debug.WriteLine($"  Checking text: '{checkingText}'");
+            System.Diagnostics.Debug.WriteLine($"  Final text: '{LatestVersionText}'");
         }
 
         public void StartUpdateCheck(string currentVersion)
         {
+            // Устанавливаем текущую версию
+            var yourVersionLabel = LocalizationManager.GetString("YourVersion") ?? "Your version:";
+            YourVersionText = $"{yourVersionLabel} {currentVersion}";
+            
+            // Отладочная информация
+            System.Diagnostics.Debug.WriteLine($"UpdateDialog - StartUpdateCheck:");
+            System.Diagnostics.Debug.WriteLine($"  Current version: '{currentVersion}'");
+            System.Diagnostics.Debug.WriteLine($"  Your version label: '{yourVersionLabel}'");
+            System.Diagnostics.Debug.WriteLine($"  Your version text: '{YourVersionText}'");
+            
             _ = Task.Run(async () =>
             {
                 try
@@ -75,6 +118,18 @@ namespace AWSServerSelector
                     {
                         if (latestRelease != null)
                         {
+                            // Устанавливаем актуальную версию (убираем префикс "v")
+                            var latestVersionLabel = LocalizationManager.GetString("LatestVersion") ?? "Latest version:";
+                            var versionNumber = latestRelease.TagName?.TrimStart('v') ?? "unknown";
+                            LatestVersionText = $"{latestVersionLabel} {versionNumber}";
+                            
+                            // Отладочная информация
+                            System.Diagnostics.Debug.WriteLine($"UpdateDialog - Setting latest version:");
+                            System.Diagnostics.Debug.WriteLine($"  Label: '{latestVersionLabel}'");
+                            System.Diagnostics.Debug.WriteLine($"  TagName: '{latestRelease.TagName}'");
+                            System.Diagnostics.Debug.WriteLine($"  Cleaned version: '{versionNumber}'");
+                            System.Diagnostics.Debug.WriteLine($"  Final text: '{LatestVersionText}'");
+                            
                             if (releaseChecker.IsUpdateAvailable(latestRelease))
                             {
                                 var downloadAsset = releaseChecker.GetDownloadAsset(latestRelease);
@@ -94,6 +149,10 @@ namespace AWSServerSelector
                         }
                         else
                         {
+                            // Если не удалось получить информацию о релизе, показываем ошибку
+                            var latestVersionLabel = LocalizationManager.GetString("LatestVersion") ?? "Latest version:";
+                            var errorText = LocalizationManager.GetString("UpdateCheckFailed") ?? "Failed to get update information.";
+                            LatestVersionText = $"{latestVersionLabel} {errorText}";
                             StatusText = LocalizationManager.GetString("UpdateCheckFailed");
                         }
                     });
@@ -102,6 +161,9 @@ namespace AWSServerSelector
                 {
                     await Dispatcher.InvokeAsync(() =>
                     {
+                        var latestVersionLabel = LocalizationManager.GetString("LatestVersion") ?? "Latest version:";
+                        var errorText = LocalizationManager.GetString("UpdateCheckError") ?? "Error checking for updates:";
+                        LatestVersionText = $"{latestVersionLabel} {errorText}";
                         StatusText = $"{LocalizationManager.GetString("UpdateCheckError")} {ex.Message}";
                     });
                 }
@@ -110,7 +172,8 @@ namespace AWSServerSelector
 
         public void SetUpdateInfo(GitHubReleaseInfo release, GitHubAsset downloadAsset)
         {
-            UpdateTitle = $"{LocalizationManager.GetString("UpdateAvailable")} {release.TagName}";
+            var cleanVersion = release.TagName?.TrimStart('v') ?? "unknown";
+            UpdateTitle = $"{LocalizationManager.GetString("UpdateAvailable")} {cleanVersion}";
             UpdateDescription = release.Body.Length > 200 ? 
                 release.Body.Substring(0, 200) + "..." : release.Body;
             UpdateSize = $"{LocalizationManager.GetString("UpdateSize")} {FormatFileSize(downloadAsset.Size)}";

@@ -11,7 +11,7 @@
         WindowStartupLocation="CenterScreen"
         Background="#FF0A0A0A"
         FontFamily="Segoe UI Variable"
-        Icon="Resources/icon.ico"
+        Icon="../Resources/icon.ico"
         Style="{StaticResource CustomMainWindowStyle}"
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Aliased"

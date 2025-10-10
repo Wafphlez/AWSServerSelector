@@ -8,7 +8,7 @@
         ResizeMode="NoResize"
         Background="#0A0A0A"
         FontFamily="Segoe UI Variable"
-        Icon="Resources/icon.ico"
+        Icon="../Resources/icon.ico"
         Style="{StaticResource CustomWindowStyle}"
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Aliased"

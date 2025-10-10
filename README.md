@@ -150,9 +150,8 @@
 
 ```hosts
 # --+ Make Your Choice +--
-# Edited by AWS Realms (AWS Server Selector)
+# Edited by Ping by Daylight
 # Unselected servers are blocked (Gatekeep Mode)
-# Need help? Discord: https://discord.gg/gnvtATeVc4
 
 # Разрешенные серверы (закомментированы)
 # 1.2.3.4 gamelift.us-east-1.amazonaws.com

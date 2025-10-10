@@ -31,8 +31,8 @@ namespace AWSServerSelector
         #region Constants and Fields
         
         private const string RepoUrl = "https://github.com/Wafphlez/AWSServerSelector";
-        private const string WebsiteUrl = "https://github.com/Wafphlez/AWSServerSelectorwafphlez";
-        private const string DiscordUrl = "https://github.com/Wafphlez/AWSServerSelectorgnvtATeVc4";
+        private const string WebsiteUrl = "https://github.com/Wafphlez/AWSServerSelector";
+        private const string DiscordUrl = "https://github.com/Wafphlez/AWSServerSelector";
         private const string CurrentVersion = "1.0.2";
         
         // Holds endpoint list and stability flag for each region
@@ -87,7 +87,7 @@ namespace AWSServerSelector
                 "settings.json");
 
         // Hosts file section marker and path
-        private const string SectionMarker = "# --+ Make Your Choice +--";
+        private const string SectionMarker = "# -- Ping by Daylight --";
         private static string HostsPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
             "drivers\\etc\\hosts");
@@ -439,13 +439,21 @@ namespace AWSServerSelector
                     File.Copy(HostsPath, HostsPath + ".bak", true);
 
                     var sb = new StringBuilder();
-                    sb.AppendLine("# Edited by AWS Realms (AWS Server Selector)");
+                    sb.AppendLine("# Edited by Ping by Daylight");
                     sb.AppendLine("# Universal Redirect mode: redirect all GameLift endpoints to selected region");
                     sb.AppendLine($"# Need help? Discord: {DiscordUrl}");
                     sb.AppendLine();
 
+                    string currentGroup = "";
                     foreach (var kv in _regions)
                     {
+                        var groupName = GetGroupName(kv.Key);
+                        if (groupName != currentGroup)
+                        {
+                            sb.AppendLine($"# {GetGroupDisplayName(groupName)}");
+                            currentGroup = groupName;
+                        }
+                        
                         var regionHosts = kv.Value.Hosts;
                         foreach (var h in regionHosts)
                         {
@@ -542,16 +550,24 @@ namespace AWSServerSelector
                 }
 
                 var sb = new StringBuilder();
-                sb.AppendLine("# Edited by AWS Realms (AWS Server Selector)");
+                sb.AppendLine("# Edited by Ping by Daylight");
                 sb.AppendLine("# Unselected servers are blocked (Gatekeep Mode); selected servers are commented out.");
                 sb.AppendLine($"# Need help? Discord: {DiscordUrl}");
                 sb.AppendLine();
 
+                string currentGroup = "";
                 foreach (var group in ServerGroups)
                 {
                     foreach (var item in group.Servers)
                     {
                         var regionKey = item.RegionKey;
+                        var groupName = GetGroupName(regionKey);
+                        if (groupName != currentGroup)
+                        {
+                            sb.AppendLine($"# {GetGroupDisplayName(groupName)}");
+                            currentGroup = groupName;
+                        }
+                        
                         bool allow = allowedSet.Contains(regionKey);
                         var hosts = _regions[regionKey].Hosts;
                         foreach (var h in hosts)
@@ -687,11 +703,11 @@ namespace AWSServerSelector
         {
             return groupName switch
             {
-                "Europe" => "🌍 Europe",
-                "Americas" => "🌎 The Americas", 
-                "Asia" => "🌏 Asia (excluding Mainland China)",
-                "Oceania" => "🌊 Oceania",
-                "China" => "🇨🇳 Mainland China",
+                "Europe" => "Europe",
+                "Americas" => "The Americas", 
+                "Asia" => "Asia (excluding Mainland China)",
+                "Oceania" => "Oceania",
+                "China" => "Mainland China",
                 _ => groupName
             };
         }
@@ -745,7 +761,9 @@ namespace AWSServerSelector
 
             string innerLf = NormalizeToLf(innerContent ?? string.Empty);
             if (innerLf.Length > 0 && !innerLf.EndsWith("\n")) innerLf += "\n";
-            string wrapped = SectionMarker + "\n" + innerLf + SectionMarker + "\n";
+            // Убираем лишнюю пустую строку в конце innerLf
+            if (innerLf.EndsWith("\n\n")) innerLf = innerLf.TrimEnd('\n') + "\n";
+            string wrapped = SectionMarker + "\n" + innerLf + SectionMarker;
 
             string newLf;
             if (first >= 0 && last >= 0)
@@ -759,7 +777,7 @@ namespace AWSServerSelector
             }
             else
             {
-                string suffix = (lf.EndsWith("\n") ? "\n" : "\n") + "\n" + wrapped;
+                string suffix = (lf.EndsWith("\n") ? "" : "\n") + "\n" + wrapped;
                 newLf = lf + suffix;
             }
 

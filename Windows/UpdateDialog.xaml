@@ -3,12 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Проверить обновления" 
         Width="400" 
-        Height="220"
+        Height="270"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         Background="#0A0A0A"
         FontFamily="Segoe UI Variable"
-        Icon="Resources/icon.ico"
+        Icon="../Resources/icon.ico"
         Style="{StaticResource CustomWindowStyle}"
         TextOptions.TextFormattingMode="Ideal"
         TextOptions.TextRenderingMode="Aliased"
@@ -63,6 +63,19 @@
                        FontWeight="Bold"
                        Foreground="White"
                        Margin="0,0,0,10"/>
+            
+            <!-- Version Info -->
+            <StackPanel Margin="0,0,0,10">
+                <TextBlock Text="{Binding YourVersionText}"
+                           FontSize="12"
+                           Foreground="LightGray"
+                           Margin="0,0,0,5"/>
+                
+                <TextBlock Text="{Binding LatestVersionText}"
+                           FontSize="12"
+                           Foreground="LightGray"
+                           Margin="0,0,0,5"/>
+            </StackPanel>
             
             <!-- Status -->
             <TextBlock Text="{Binding StatusText}"

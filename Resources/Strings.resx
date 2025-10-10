@@ -250,4 +250,10 @@
   <data name="UpdateCheckError" xml:space="preserve">
     <value>Error checking for updates:</value>
   </data>
+  <data name="YourVersion" xml:space="preserve">
+    <value>Your version:</value>
+  </data>
+  <data name="LatestVersion" xml:space="preserve">
+    <value>Latest version:</value>
+  </data>
 </root>
