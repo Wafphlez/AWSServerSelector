@@ -408,7 +408,7 @@
                       Click="OpenHostsButton_Click"
                       Background="{StaticResource PrimaryBrush}"
                       Foreground="{StaticResource TextBrush}"/>
-            <MenuItem x:Name="ConnectionInfoMenuItem" Header="Информация о подключении"
+            <MenuItem x:Name="ConnectionInfoMenuItem" Header="Мониторинг подключения"
                       Click="ConnectionInfo_Click"
                       Background="{StaticResource PrimaryBrush}"
                       Foreground="{StaticResource TextBrush}"/>

@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,36 +19,83 @@ namespace AWSServerSelector
 {
     public partial class ConnectionInfoWindow : Window, INotifyPropertyChanged
     {
+        #region Fields
+
         private DispatcherTimer? _monitoringTimer;
-        private DispatcherTimer? _timeUpdateTimer;
-        private DateTime _lastUpdate = DateTime.Now;
+        private const string DBD_PROCESS_NAME = "DeadByDaylight-Win64-Shipping";
+        private readonly Ping _pinger = new();
+        private ConnectionInfo? _currentLobbyConnection;
+        private ConnectionInfo? _currentGameConnection;
+        private UdpGameMonitor? _udpMonitor;
+        private bool _udpMonitorStarted = false;
+        private HashSet<int> _monitoredUdpPorts = new();
         
-        // Отдельные поля для лобби и игры
-        private string _lobbyIp = "";
-        private string _lobbyServer = "";
-        private string _gameIp = "";
-        private string _gameServer = "";
+        // Фоновый мониторинг пинга (через DispatcherTimer)
+        private DispatcherTimer? _pingTimer;
+        private Ping? _backgroundPinger; // Отдельный Ping объект для фонового мониторинга!
+        private string? _currentGameServerIp;
+        private int _currentGameServerPort;
+        
+        // Запоминаем выбранные IP для стабильности
+        private string? _lastLobbyIp;
+        private int _lastLobbyPort;
+        private string? _lastGameIp;
+        private int _lastGamePort;
+
+        #endregion
+
+        #region Constructor
 
         public ConnectionInfoWindow()
         {
             InitializeComponent();
-            DataContext = this;
-            
-            // Инициализируем время последнего обновления
-            UpdateLastUpdateDisplay();
-            
-            StartMonitoring();
-            StartTimeUpdateTimer();
+            Loaded += ConnectionInfoWindow_Loaded;
+            Closing += ConnectionInfoWindow_Closing;
         }
+
+        #endregion
+
+        #region Events
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        private void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        #endregion
+
+        #region Lifecycle Methods
+
+        private void ConnectionInfoWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            StartMonitoring();
+        }
+
+        private void ConnectionInfoWindow_Closing(object? sender, CancelEventArgs e)
+        {
+            StopMonitoring();
+            StopPingMonitoring();
+            _udpMonitor?.Dispose();
+            _udpMonitor = null;
+        }
+
+        #endregion
+
+        #region Monitoring
 
         private void StartMonitoring()
         {
             _monitoringTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(2) // Проверяем каждые 2 секунды
+                Interval = TimeSpan.FromSeconds(5)
             };
-            _monitoringTimer.Tick += async (s, e) => await CheckConnection();
+            _monitoringTimer.Tick += async (s, e) => await MonitorConnectionsAsync();
             _monitoringTimer.Start();
+
+            // Первый запуск сразу
+            _ = MonitorConnectionsAsync();
         }
 
         private void StopMonitoring()
@@ -56,1102 +104,1359 @@ namespace AWSServerSelector
             _monitoringTimer = null;
         }
 
-        private void StartTimeUpdateTimer()
-        {
-            _timeUpdateTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(1) // Обновляем каждую секунду
-            };
-            _timeUpdateTimer.Tick += (s, e) => UpdateLastUpdateDisplay();
-            _timeUpdateTimer.Start();
-        }
-
-        private void StopTimeUpdateTimer()
-        {
-            _timeUpdateTimer?.Stop();
-            _timeUpdateTimer = null;
-        }
-
-        private void UpdateLastUpdateDisplay()
+        private void StartUdpMonitor(int processId)
         {
             try
             {
-                var timeSpan = DateTime.Now - _lastUpdate;
-                var relativeTime = FormatRelativeTime(timeSpan);
-                var fullTime = _lastUpdate.ToString("dd.MM.yyyy HH:mm:ss");
-                
-                Dispatcher.Invoke(() =>
-                {
-                    LastUpdateText.Text = $"{fullTime} ({relativeTime})";
-                    LastUpdateText.Foreground = new SolidColorBrush(Colors.White);
-                });
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Ошибка при обновлении времени: {ex.Message}");
-            }
-        }
+                Debug.WriteLine("========================================");
+                Debug.WriteLine("🚀 Запуск UDP монитора для игры...");
+                Debug.WriteLine("========================================");
 
-        private string FormatRelativeTime(TimeSpan timeSpan)
-        {
-            if (timeSpan.TotalSeconds < 60)
-            {
-                var seconds = (int)timeSpan.TotalSeconds;
-                return seconds <= 1 ? "только что" : $"{seconds} сек назад";
-            }
-            else if (timeSpan.TotalMinutes < 60)
-            {
-                var minutes = (int)timeSpan.TotalMinutes;
-                return minutes == 1 ? "1 мин назад" : $"{minutes} мин назад";
-            }
-            else if (timeSpan.TotalHours < 24)
-            {
-                var hours = (int)timeSpan.TotalHours;
-                return hours == 1 ? "1 час назад" : $"{hours} ч назад";
-            }
-            else
-            {
-                var days = (int)timeSpan.TotalDays;
-                return days == 1 ? "1 день назад" : $"{days} дн назад";
-            }
-        }
-
-        private async Task CheckConnection()
-        {
-            try
-            {
-                Debug.WriteLine("=== Начало проверки соединений ===");
-                bool hasGameConnection = false;
-                bool hasLobbyConnection = false;
-                
-                // Проверяем UDP соединения (игровые серверы)
+                // Получаем все UDP порты процесса DBD
                 var udpConnections = GetActiveUdpConnections();
-                Debug.WriteLine($"Найдено {udpConnections.Count} активных UDP соединений");
-                
-                // Логируем все UDP соединения
-                foreach (var conn in udpConnections)
+                var dbdPorts = udpConnections
+                    .Where(c => c.ProcessId == processId)
+                    .Select(c => c.LocalPort)
+                    .Where(p => p > 0)
+                    .ToHashSet();
+
+                if (!dbdPorts.Any())
                 {
-                    Debug.WriteLine($"UDP: {conn.LocalEndPoint} -> {conn.RemoteEndPoint}");
+                    Debug.WriteLine("⚠️ Не найдено UDP портов для DBD");
+                    Debug.WriteLine("   Игра еще не начала матч, UDP порты появятся позже");
+                    return;
                 }
+
+                Debug.WriteLine($"📡 Найдено {dbdPorts.Count} UDP портов DBD");
+                Debug.WriteLine($"   Порты: {string.Join(", ", dbdPorts.Take(10))}");
+
+                _udpMonitor = new UdpGameMonitor();
+                _udpMonitor.GameServerDetected += UdpMonitor_GameServerDetected;
                 
-                var gameConnection = await FindGameConnectionAsync(udpConnections);
-                
-                if (gameConnection != null)
+                Debug.WriteLine("🔧 Попытка запуска захвата пакетов...");
+                if (_udpMonitor.StartCapture(dbdPorts))
                 {
-                    var ip = gameConnection.RemoteEndPoint.Address.ToString();
-                    var port = gameConnection.RemoteEndPoint.Port.ToString();
-                    var serverName = await IdentifyServerAsync(ip);
+                    _udpMonitorStarted = true;
+                    _monitoredUdpPorts = dbdPorts;
+                    Debug.WriteLine("========================================");
+                    Debug.WriteLine("✅✅✅ UDP монитор успешно запущен! ✅✅✅");
+                    Debug.WriteLine("========================================");
+                }
+                else
+                {
+                    Debug.WriteLine("========================================");
+                    Debug.WriteLine("❌ НЕ УДАЛОСЬ ЗАПУСТИТЬ UDP МОНИТОР");
+                    Debug.WriteLine("========================================");
+                    Debug.WriteLine("💡 Возможные решения:");
+                    Debug.WriteLine("   1. Убедитесь что Npcap установлен с опцией 'WinPcap API-compatible Mode'");
+                    Debug.WriteLine("   2. Закройте другие программы (Wireshark, VPN)");
+                    Debug.WriteLine("   3. Попробуйте переустановить Npcap");
+                    Debug.WriteLine("");
+                    Debug.WriteLine("⚠️ TCP мониторинг (лобби) будет работать нормально!");
+                    Debug.WriteLine("⚠️ UDP мониторинг (матч) недоступен");
                     
-                    Debug.WriteLine($"Найдено игровое соединение: {ip}:{port} - {serverName}");
-                    
-                    // Обновляем игровое соединение
-                    if (ip != _gameIp || serverName != _gameServer)
+                    // Показываем сообщение пользователю
+                    Dispatcher.Invoke(() =>
                     {
-                        _gameIp = ip;
-                        _gameServer = serverName;
-                        hasGameConnection = true;
-                    }
-                }
-                else
-                {
-                    // Не сбрасываем игровое соединение, если оно уже было определено
-                    // Это позволяет сохранить информацию о последнем известном игровом сервере
-                    Debug.WriteLine("Активное игровое соединение не найдено, но сохраняем последние известные данные");
-                }
-                
-                // Проверяем TCP соединения (лобби и другие сервисы)
-                var tcpConnections = GetActiveTcpConnections();
-                Debug.WriteLine($"Найдено {tcpConnections.Count} активных TCP соединений");
-                var establishedConnections = tcpConnections.Where(c => c.State == TcpState.Established).ToList();
-                Debug.WriteLine($"Установленных TCP соединений: {establishedConnections.Count}");
-                
-                // Выводим все установленные TCP соединения для отладки
-                foreach (var conn in establishedConnections)
-                {
-                    var ip = conn.RemoteEndPoint.Address.ToString();
-                    var port = conn.RemoteEndPoint.Port;
-                    var isAws = await IsAwsIpAsync(ip);
-                    Debug.WriteLine($"TCP соединение: {ip}:{port} - AWS: {isAws}");
-                }
-                
-                var lobbyConnection = await FindDbdConnectionAsync(tcpConnections);
-                
-                if (lobbyConnection != null)
-                {
-                    var ip = lobbyConnection.RemoteEndPoint.Address.ToString();
-                    var port = lobbyConnection.RemoteEndPoint.Port.ToString();
-                    var serverName = await IdentifyServerAsync(ip);
-                    
-                    Debug.WriteLine($"Найдено лобби соединение: {ip}:{port} - {serverName}");
-                    
-                    // Обновляем лобби соединение
-                    if (ip != _lobbyIp || serverName != _lobbyServer)
-                    {
-                        _lobbyIp = ip;
-                        _lobbyServer = serverName;
-                        hasLobbyConnection = true;
-                    }
-                }
-                else
-                {
-                    // Не сбрасываем лобби соединение, если оно уже было определено
-                    // Это позволяет сохранить информацию о последнем известном лобби сервере
-                    Debug.WriteLine("Активное лобби соединение не найдено, но сохраняем последние известные данные");
-                }
-                
-                // Обновляем UI только если есть изменения
-                if (hasGameConnection || hasLobbyConnection)
-                {
-                    _lastUpdate = DateTime.Now;
-                    UpdateConnectionInfo();
-                }
-                else
-                {
-                    // Обновляем время последнего обновления, но не сбрасываем данные
-                    _lastUpdate = DateTime.Now;
-                    UpdateConnectionInfo();
+                        MessageBox.Show(
+                            "UDP мониторинг недоступен.\n\n" +
+                            "Будет работать только отображение TCP соединений (лобби).\n\n" +
+                            "Для мониторинга UDP (матча) убедитесь что:\n" +
+                            "• Npcap установлен с опцией 'WinPcap API-compatible Mode'\n" +
+                            "• Закройте Wireshark или другие программы перехвата пакетов\n" +
+                            "• Попробуйте переустановить Npcap\n\n" +
+                            "Приложение продолжит работу без UDP мониторинга.",
+                            "UDP мониторинг недоступен",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                    });
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Ошибка при проверке соединения: {ex.Message}");
-            }
-        }
-
-        private List<TcpConnectionInformation> GetActiveTcpConnections()
-        {
-            var connections = new List<TcpConnectionInformation>();
-            
-            try
-            {
-                var ipGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
-                var tcpConnections = ipGlobalProperties.GetActiveTcpConnections();
-                connections.AddRange(tcpConnections);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Ошибка при получении TCP соединений: {ex.Message}");
-            }
-            
-            return connections;
-        }
-
-        private List<UdpConnectionInfo> GetActiveUdpConnections()
-        {
-            var connections = new List<UdpConnectionInfo>();
-            
-            try
-            {
-                // Используем netstat для получения UDP соединений с удаленными адресами
-                var process = new System.Diagnostics.Process
-                {
-                    StartInfo = new System.Diagnostics.ProcessStartInfo
-                    {
-                        FileName = "netstat",
-                        Arguments = "-an",
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        CreateNoWindow = true
-                    }
-                };
+                Debug.WriteLine("========================================");
+                Debug.WriteLine($"❌ КРИТИЧЕСКАЯ ОШИБКА UDP МОНИТОРА");
+                Debug.WriteLine("========================================");
+                Debug.WriteLine($"Тип: {ex.GetType().Name}");
+                Debug.WriteLine($"Сообщение: {ex.Message}");
+                Debug.WriteLine($"StackTrace: {ex.StackTrace}");
                 
-                process.Start();
-                var output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-                
-                var lines = output.Split('\n');
-                foreach (var line in lines)
+                if (ex.InnerException != null)
                 {
-                    if (line.Contains("UDP") && !line.Contains("*:*") && !line.Contains("127.0.0.1") && !line.Contains("192.168.1.52"))
-                    {
-                        var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-                        if (parts.Length >= 3)
-                        {
-                            var localAddress = parts[1];
-                            var remoteAddress = parts[2];
-                            
-                            if (remoteAddress != "*:*" && !remoteAddress.StartsWith("127.0.0.1") && !remoteAddress.StartsWith("192.168.1.52"))
-                            {
-                                try
-                                {
-                                    var remoteParts = remoteAddress.Split(':');
-                                    if (remoteParts.Length == 2 && int.TryParse(remoteParts[1], out int port))
-                                    {
-                                        if (IPAddress.TryParse(remoteParts[0], out var ip))
-                                        {
-                                            connections.Add(new UdpConnectionInfo
-                                            {
-                                                LocalEndPoint = new IPEndPoint(IPAddress.Any, 0),
-                                                RemoteEndPoint = new IPEndPoint(ip, port)
-                                            });
-                                        }
-                                    }
-                                }
-                                catch (Exception ex)
-                                {
-                                    Debug.WriteLine($"Ошибка парсинга UDP адреса {remoteAddress}: {ex.Message}");
-                                }
-                            }
-                        }
-                    }
+                    Debug.WriteLine($"Inner Exception: {ex.InnerException.Message}");
                 }
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Ошибка при получении UDP соединений: {ex.Message}");
-            }
-            
-            return connections;
         }
 
-        private async Task<UdpConnectionInfo?> FindGameConnectionAsync(List<UdpConnectionInfo> connections)
+        private void UdpMonitor_GameServerDetected(object? sender, UdpGameMonitor.GameServerInfo e)
         {
-            // Ищем UDP соединения, которые могут быть игровыми серверами
-            var commonPorts = new HashSet<int> { 53, 67, 68, 123, 161, 162, 500, 4500, 5353, 5355 };
-            
-            // DNS серверы и известные сервисы, которые не могут быть игровыми серверами
-            var excludedServers = new HashSet<string> { 
-                "8.8.8.8", "8.8.4.4",           // Google DNS
-                "1.1.1.1", "1.0.0.1",           // Cloudflare DNS
-                "208.67.222.222", "208.67.220.220", // OpenDNS
-                "9.9.9.9", "149.112.112.112",   // Quad9 DNS
-                "173.194.221.105",              // Google сервер
-                "142.250.191.105",              // Google сервер
-                "172.217.16.110",               // Google сервер
-                "216.58.208.110"                // Google сервер
+            Debug.WriteLine($"🎮 Обнаружен игровой сервер: {e.RemoteAddress}:{e.RemotePort}");
+        }
+
+        private async Task EnsureUdpMonitorRunningAsync(int processId)
+        {
+            // Получаем текущие UDP порты процесса DBD
+            var udpConnections = GetActiveUdpConnections();
+            var currentPorts = udpConnections
+                .Where(c => c.ProcessId == processId)
+                .Select(c => c.LocalPort)
+                .Where(p => p > 0)
+                .ToHashSet();
+
+            // Если нет портов - останавливаем монитор если он был запущен
+            if (!currentPorts.Any())
+            {
+                if (_udpMonitorStarted)
+                {
+                    Debug.WriteLine("========================================");
+                    Debug.WriteLine("🚪 UDP порты исчезли - игрок вышел из матча");
+                    Debug.WriteLine("========================================");
+                    
+                    // Останавливаем монитор
+                    if (_udpMonitor != null)
+                    {
+                        Debug.WriteLine("🛑 Остановка UDP монитора...");
+                        _udpMonitor.Dispose();
+                        _udpMonitor = null;
+                    }
+                    
+                    _udpMonitorStarted = false;
+                    _monitoredUdpPorts.Clear();
+                    
+                    // Сбрасываем сохраненный IP игры для корректного обновления UI
+                    _lastGameIp = null;
+                    _lastGamePort = 0;
+                    
+                    // Останавливаем фоновый пингер
+                    StopPingMonitoring();
+                    
+                    Debug.WriteLine("✅ UDP монитор остановлен");
+                }
+                else
+                {
+                    Debug.WriteLine("⚠️ UDP порты не найдены (игра еще не в матче)");
+                }
+                return;
+            }
+
+            // Проверяем, изменились ли порты
+            bool portsChanged = !_monitoredUdpPorts.SetEquals(currentPorts);
+
+            if (portsChanged)
+            {
+                Debug.WriteLine("========================================");
+                Debug.WriteLine($"🔄 Обнаружены новые/измененные UDP порты");
+                Debug.WriteLine($"   Старые порты ({_monitoredUdpPorts.Count}): {string.Join(", ", _monitoredUdpPorts.Take(5))}");
+                Debug.WriteLine($"   Новые порты ({currentPorts.Count}): {string.Join(", ", currentPorts.Take(5))}");
+                Debug.WriteLine("========================================");
+
+                // Останавливаем старый монитор
+                if (_udpMonitor != null)
+                {
+                    Debug.WriteLine("🛑 Остановка старого UDP монитора...");
+                    _udpMonitor.Dispose();
+                    _udpMonitor = null;
+                    _udpMonitorStarted = false;
+                }
+
+                // Обновляем список отслеживаемых портов
+                _monitoredUdpPorts = currentPorts;
+
+                // Запускаем новый монитор
+                StartUdpMonitor(processId);
+            }
+            else if (_udpMonitorStarted)
+            {
+                Debug.WriteLine($"✅ UDP монитор уже работает с {_monitoredUdpPorts.Count} портами");
+            }
+
+            await Task.CompletedTask;
+        }
+
+        private async Task<ConnectionInfo?> GetUdpConnectionFromMonitorAsync()
+        {
+            if (_udpMonitor == null)
+                return null;
+
+            var gameServer = _udpMonitor.GetActiveGameServer();
+            if (gameServer == null)
+                return null;
+
+            Debug.WriteLine($"📊 Активный игровой сервер из монитора: {gameServer.RemoteAddress}:{gameServer.RemotePort}");
+
+            var connectionInfo = new ConnectionInfo
+            {
+                Protocol = "UDP",
+                RemoteAddress = gameServer.RemoteAddress,
+                RemotePort = gameServer.RemotePort,
+                LocalPort = gameServer.LocalPort,
+                Ping = -1, // Пинг будет измерен фоновым мониторингом к GameLift хосту
+                ProcessId = -1 // Не важно для отображения
             };
-            
-            foreach (var connection in connections)
-            {
-                var ip = connection.RemoteEndPoint.Address.ToString();
-                var port = connection.RemoteEndPoint.Port;
-                var localPort = connection.LocalEndPoint.Port;
-                var address = connection.RemoteEndPoint.Address;
-                
-                bool isLoopback = IPAddress.IsLoopback(address);
-                bool isPrivate = IsPrivateIp(address);
-                bool isCommonPort = commonPorts.Contains(port);
-                bool isExcludedServer = excludedServers.Contains(ip);
-                bool isFromDbd = IsDeadByDaylightProcess(localPort);
-                
-                Debug.WriteLine($"Проверяем UDP соединение {ip}:{port} - Loopback: {isLoopback}, Private: {isPrivate}, CommonPort: {isCommonPort}, ExcludedServer: {isExcludedServer}, от DeadByDaylight: {isFromDbd}");
-                
-                // Ищем внешние UDP соединения на нестандартных портах (игровые серверы) от DeadByDaylight
-                // Исключаем известные сервисы (Google, DNS и т.д.)
-                if (!isLoopback && !isPrivate && !isCommonPort && !isExcludedServer && isFromDbd)
-                {
-                    // Дополнительная проверка: приоритет AWS GameLift серверам
-                    var isAws = await IsAwsIpAsync(ip);
-                    if (isAws)
-                    {
-                        Debug.WriteLine($"Найдено AWS GameLift UDP соединение от DeadByDaylight: {ip}:{port}");
-                        return connection;
-                    }
-                    
-                    // Если не AWS, но все остальные условия выполнены, тоже считаем игровым
-                    Debug.WriteLine($"Найдено игровое UDP соединение от DeadByDaylight: {ip}:{port}");
-                    return connection;
-                }
-            }
-            
-            Debug.WriteLine("Игровое UDP соединение не найдено");
-            return null;
+
+            // Обогащаем информацией о регионе AWS
+            return await EnrichConnectionInfoAsync(connectionInfo);
         }
 
-        private async Task<TcpConnectionInformation?> FindDbdConnectionAsync(List<TcpConnectionInformation> connections)
+
+        private async Task MonitorConnectionsAsync()
         {
-            // Ищем соединения, которые могут быть связаны с Dead by Daylight
-            var commonPorts = new HashSet<int> { 80, 443, 22, 21, 25, 53, 110, 143, 993, 995, 587, 465, 1433, 3306, 5432, 6379, 27017, 11211, 9200, 9300 };
-            
-            // Приоритет 1: GameLift серверы (внутриигровые) от DeadByDaylight
-            var gameliftConnection = await FindGameLiftConnectionAsync(connections);
-            if (gameliftConnection != null)
+            try
             {
-                // Проверяем, что соединение идет от DeadByDaylight
-                var localPort = gameliftConnection.LocalEndPoint.Port;
-                if (IsDeadByDaylightProcess(localPort))
+                var dbdProcess = GetDbdProcess();
+                
+                if (dbdProcess == null)
                 {
-                    Debug.WriteLine($"Найдено GameLift соединение от DeadByDaylight: {gameliftConnection.RemoteEndPoint}");
-                    return gameliftConnection;
+                    Debug.WriteLine("DBD процесс не найден");
+                    UpdateNoConnection();
+                    return;
+                }
+
+                Debug.WriteLine($"DBD процесс найден: PID {dbdProcess.Id}");
+
+                // Проверяем UDP порты и запускаем/перезапускаем UDP монитор при необходимости
+                await EnsureUdpMonitorRunningAsync(dbdProcess.Id);
+
+                // Получаем TCP соединения (для лобби)
+                var tcpConnection = await GetTcpConnectionAsync(dbdProcess.Id);
+                
+                if (tcpConnection != null)
+                {
+                    Debug.WriteLine($"✅ TCP соединение найдено: {tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}");
                 }
                 else
                 {
-                    Debug.WriteLine($"GameLift соединение не от DeadByDaylight (процесс: {GetProcessNameByPort(localPort)})");
-                }
-            }
-            
-            // Приоритет 2: Другие AWS серверы от DeadByDaylight
-            foreach (var connection in connections)
-            {
-                if (connection.State == TcpState.Established)
-                {
-                    var ip = connection.RemoteEndPoint.Address.ToString();
-                    var port = connection.RemoteEndPoint.Port;
-                    var localPort = connection.LocalEndPoint.Port;
-                    
-                    var isAws = await IsAwsIpAsync(ip);
-                    var isFromDbd = IsDeadByDaylightProcess(localPort);
-                    
-                    Debug.WriteLine($"Проверяем AWS соединение {ip}:{port} - AWS: {isAws}, от DeadByDaylight: {isFromDbd}");
-                    
-                    if (isAws && isFromDbd)
-                    {
-                        Debug.WriteLine($"Найдено AWS соединение от DeadByDaylight: {ip}:{port}");
-                        return connection;
-                    }
-                }
-            }
-            
-            // Приоритет 3: Внешние соединения на нестандартных портах от DeadByDaylight
-            foreach (var connection in connections)
-            {
-                if (connection.State == TcpState.Established)
-                {
-                    var ip = connection.RemoteEndPoint.Address.ToString();
-                    var port = connection.RemoteEndPoint.Port;
-                    var localPort = connection.LocalEndPoint.Port;
-                    var address = connection.RemoteEndPoint.Address;
-                    
-                    bool isLoopback = IPAddress.IsLoopback(address);
-                    bool isPrivate = IsPrivateIp(address);
-                    bool isCommonPort = commonPorts.Contains(port);
-                    bool isFromDbd = IsDeadByDaylightProcess(localPort);
-                    
-                    Debug.WriteLine($"Проверяем не-AWS соединение {ip}:{port} - Loopback: {isLoopback}, Private: {isPrivate}, CommonPort: {isCommonPort}, от DeadByDaylight: {isFromDbd}");
-                    
-                    // Ищем внешние соединения на нестандартных портах от DeadByDaylight
-                    if (!isLoopback && !isPrivate && !isCommonPort && isFromDbd)
-                    {
-                        Debug.WriteLine($"Найдено нестандартное соединение от DeadByDaylight: {ip}:{port}");
-                        return connection;
-                    }
-                }
-            }
-            
-            Debug.WriteLine("Не найдено подходящих соединений");
-            return null;
-        }
-
-        private async Task<TcpConnectionInformation?> FindGameLiftConnectionAsync(List<TcpConnectionInformation> connections)
-        {
-            // Ищем GameLift серверы (внутриигровые серверы)
-            foreach (var connection in connections)
-            {
-                if (connection.State == TcpState.Established)
-                {
-                    var ip = connection.RemoteEndPoint.Address.ToString();
-                    var port = connection.RemoteEndPoint.Port;
-                    
-                    // Проверяем, является ли это GameLift сервером
-                    var isGameLift = await IsGameLiftServerAsync(ip);
-                    Debug.WriteLine($"Проверяем GameLift соединение {ip}:{port} - GameLift: {isGameLift}");
-                    
-                    if (isGameLift)
-                    {
-                        Debug.WriteLine($"Найдено GameLift соединение: {ip}:{port}");
-                        return connection;
-                    }
-                }
-            }
-            
-            return null;
-        }
-
-        private async Task<bool> IsGameLiftServerAsync(string ip)
-        {
-            try
-            {
-                var isAws = await AwsIpRangeManager.Instance.IsAwsIpAsync(ip);
-                if (!isAws) return false;
-                
-                var service = await AwsIpRangeManager.Instance.GetAwsServiceAsync(ip);
-                var region = await AwsIpRangeManager.Instance.GetAwsRegionAsync(ip);
-                
-                // GameLift серверы обычно находятся в определенных регионах
-                var gameLiftRegions = new HashSet<string>
-                {
-                    "eu-central-1", // Центральная Европа (ваш приоритет)
-                    "us-east-1",    // US East
-                    "us-west-2",    // US West
-                    "eu-west-1",    // Europe Ireland
-                    "ap-northeast-1", // Asia Tokyo
-                    "ap-southeast-1"  // Asia Singapore
-                };
-                
-                // Проверяем, что это GameLift сервис в игровом регионе
-                bool isGameLiftService = service.Contains("GAMELIFT", StringComparison.OrdinalIgnoreCase) ||
-                                       service.Contains("EC2", StringComparison.OrdinalIgnoreCase); // GameLift может использовать EC2
-                
-                bool isGameLiftRegion = gameLiftRegions.Contains(region);
-                
-                Debug.WriteLine($"GameLift проверка для {ip}: Service={service}, Region={region}, IsGameLiftService={isGameLiftService}, IsGameLiftRegion={isGameLiftRegion}");
-                
-                return isGameLiftService && isGameLiftRegion;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Ошибка при проверке GameLift сервера {ip}: {ex.Message}");
-                return false;
-            }
-        }
-
-        private bool IsPrivateIp(IPAddress address)
-        {
-            if (address.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
-                return false;
-
-            var bytes = address.GetAddressBytes();
-            
-            // 10.0.0.0/8
-            if (bytes[0] == 10) return true;
-            
-            // 172.16.0.0/12
-            if (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31) return true;
-            
-            // 192.168.0.0/16
-            if (bytes[0] == 192 && bytes[1] == 168) return true;
-            
-            // 169.254.0.0/16 (link-local)
-            if (bytes[0] == 169 && bytes[1] == 254) return true;
-            
-            return false;
-        }
-
-        private async Task<bool> IsAwsIpAsync(string ip)
-        {
-            try
-            {
-                return await AwsIpRangeManager.Instance.IsAwsIpAsync(ip);
-            }
-            catch
-            {
-                    return false;
-            }
-        }
-
-        private async Task<string> IdentifyServerAsync(string ip)
-        {
-            try
-            {
-                var isAws = await AwsIpRangeManager.Instance.IsAwsIpAsync(ip);
-                if (isAws)
-                {
-                    var region = await AwsIpRangeManager.Instance.GetAwsRegionAsync(ip);
-                    var service = await AwsIpRangeManager.Instance.GetAwsServiceAsync(ip);
-                    var isGameLift = await IsGameLiftServerAsync(ip);
-                    
-                    if (isGameLift)
-                    {
-                        return $"🎮 GameLift {GetRegionDisplayName(region)} (Игровой сервер)";
-                    }
-                    else
-                    {
-                        return $"AWS {GetRegionDisplayName(region)} ({service})";
-                    }
+                    Debug.WriteLine("⚠️ TCP соединение не найдено");
                 }
                 
-                // Проверяем другие известные провайдеры
-                var nonAwsInfo = await IdentifyNonAwsServerAsync(ip);
-                if (!string.IsNullOrEmpty(nonAwsInfo))
+                // Получаем UDP соединения (для игры) - только если монитор запущен
+                ConnectionInfo? udpConnection = null;
+                
+                if (_udpMonitorStarted && _udpMonitor != null)
                 {
-                    return nonAwsInfo;
+                    // Монитор работает - пробуем получить соединение
+                    udpConnection = await GetUdpConnectionFromMonitorAsync();
                 }
                 
-                return "Неизвестный сервер";
-            }
-            catch
-            {
-                return "Неизвестный сервер";
-            }
-        }
-
-        private async Task<string> IdentifyNonAwsServerAsync(string ip)
-        {
-            try
-            {
-                // Проверяем известные IP диапазоны
-                if (IsGoogleIp(ip))
+                // Если не нашли через монитор, пробуем старый метод
+                if (udpConnection == null)
                 {
-                    return "🌐 Google Cloud (США, Калифорния)";
+                    udpConnection = await GetUdpConnectionAsync(dbdProcess.Id);
                 }
                 
-                if (IsMicrosoftIp(ip))
+                if (udpConnection != null)
                 {
-                    return "🌐 Microsoft Azure";
-                }
-                
-                if (IsCloudflareIp(ip))
-                {
-                    return "🌐 Cloudflare";
-                }
-                
-                // Попробуем определить по геолокации
-                var geoInfo = await GetGeoLocationInfoAsync(ip);
-                if (!string.IsNullOrEmpty(geoInfo))
-                {
-                    return geoInfo;
-                }
-                
-                return string.Empty;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Ошибка при определении не-AWS сервера {ip}: {ex.Message}");
-                return string.Empty;
-            }
-        }
-
-        private bool IsGoogleIp(string ip)
-        {
-            // Google IP диапазоны (основные)
-            var googleRanges = new[]
-            {
-                "108.177.0.0/16",    // Google
-                "172.217.0.0/16",    // Google
-                "74.125.0.0/16",     // Google
-                "173.194.0.0/16",    // Google
-                "209.85.0.0/16",     // Google
-                "66.102.0.0/16",     // Google
-                "66.249.0.0/16",     // Google
-                "72.14.0.0/16",      // Google
-                "216.58.0.0/16",     // Google
-                "216.239.0.0/16"     // Google
-            };
-            
-            return IsIpInRanges(ip, googleRanges);
-        }
-
-        private bool IsMicrosoftIp(string ip)
-        {
-            // Microsoft Azure IP диапазоны (основные)
-            var microsoftRanges = new[]
-            {
-                "40.64.0.0/10",      // Microsoft Azure
-                "52.160.0.0/11",     // Microsoft Azure
-                "52.224.0.0/11",     // Microsoft Azure
-                "104.40.0.0/13",     // Microsoft Azure
-                "104.146.0.0/15",    // Microsoft Azure
-                "104.208.0.0/12",    // Microsoft Azure
-                "104.211.0.0/16",    // Microsoft Azure
-                "104.214.0.0/15",    // Microsoft Azure
-                "104.215.0.0/16",    // Microsoft Azure
-                "104.40.0.0/13"      // Microsoft Azure
-            };
-            
-            return IsIpInRanges(ip, microsoftRanges);
-        }
-
-        private bool IsCloudflareIp(string ip)
-        {
-            // Cloudflare IP диапазоны (основные)
-            var cloudflareRanges = new[]
-            {
-                "173.245.48.0/20",   // Cloudflare
-                "103.21.244.0/22",   // Cloudflare
-                "103.22.200.0/22",   // Cloudflare
-                "103.31.4.0/22",     // Cloudflare
-                "141.101.64.0/18",   // Cloudflare
-                "108.162.192.0/18",  // Cloudflare
-                "190.93.240.0/20",   // Cloudflare
-                "188.114.96.0/20",   // Cloudflare
-                "197.234.240.0/22",  // Cloudflare
-                "198.41.128.0/17"    // Cloudflare
-            };
-            
-            return IsIpInRanges(ip, cloudflareRanges);
-        }
-
-        private bool IsIpInRanges(string ip, string[] ranges)
-        {
-            try
-            {
-                if (!IPAddress.TryParse(ip, out var address))
-                    return false;
-                
-                foreach (var range in ranges)
-                {
-                    if (IsIpAddressInRange(address, range))
-                        return true;
-                }
-                
-                return false;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private bool IsIpAddressInRange(IPAddress address, string cidr)
-        {
-            try
-            {
-                var parts = cidr.Split('/');
-                var networkAddress = IPAddress.Parse(parts[0]);
-                var prefixLength = int.Parse(parts[1]);
-
-                var ipBytes = address.GetAddressBytes();
-                var networkBytes = networkAddress.GetAddressBytes();
-
-                uint ipUint = BitConverter.ToUInt32(ipBytes.Reverse().ToArray(), 0);
-                uint networkUint = BitConverter.ToUInt32(networkBytes.Reverse().ToArray(), 0);
-
-                uint mask = ~(uint.MaxValue >> prefixLength);
-
-                return (ipUint & mask) == (networkUint & mask);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private async Task<string> GetGeoLocationInfoAsync(string ip)
-        {
-            try
-            {
-                // Простая геолокация по известным паттернам
-                var bytes = IPAddress.Parse(ip).GetAddressBytes();
-                
-                // Google IP (108.177.x.x)
-                if (bytes[0] == 108 && bytes[1] == 177)
-                {
-                    return "🌐 Google (США, Калифорния)";
-                }
-                
-                // Другие известные паттерны можно добавить здесь
-                
-                return string.Empty;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
-        private string GetRegionDisplayName(string region)
-        {
-            return region switch
-            {
-                "us-east-1" => "US East (N. Virginia)",
-                "us-east-2" => "US East (Ohio)",
-                "us-west-1" => "US West (N. California)",
-                "us-west-2" => "US West (Oregon)",
-                "eu-west-1" => "Europe (Ireland)",
-                "eu-west-2" => "Europe (London)",
-                "eu-central-1" => "Europe (Frankfurt)",
-                "ap-northeast-1" => "Asia Pacific (Tokyo)",
-                "ap-northeast-2" => "Asia Pacific (Seoul)",
-                "ap-south-1" => "Asia Pacific (Mumbai)",
-                "ap-southeast-1" => "Asia Pacific (Singapore)",
-                "ap-southeast-2" => "Asia Pacific (Sydney)",
-                "ca-central-1" => "Canada (Central)",
-                "sa-east-1" => "South America (São Paulo)",
-                _ => region
-            };
-        }
-
-        private void UpdateConnectionInfo()
-        {
-            Dispatcher.Invoke(() =>
-            {
-                bool hasGame = !string.IsNullOrEmpty(_gameIp);
-                bool hasLobby = !string.IsNullOrEmpty(_lobbyIp);
-                
-                // Обновляем лобби
-                if (hasLobby)
-                {
-                    LobbyStatusText.Text = "Подключено";
-                    LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // Green
-                    
-                    LobbyIpText.Text = _lobbyIp;
-                    LobbyIpText.Foreground = new SolidColorBrush(Colors.White);
-                    
-                    LobbyServerText.Text = _lobbyServer;
-                    LobbyServerText.Foreground = new SolidColorBrush(Color.FromRgb(0x4A, 0x90, 0xE2)); // Blue
-                    
-                    // Обновляем регион для лобби
-                    LobbyRegionText.Text = DetermineRegion(_lobbyServer);
-                    LobbyRegionText.Foreground = new SolidColorBrush(Colors.White);
-                    
-                    CopyLobbyIpButton.Visibility = Visibility.Visible;
-                    
-                    // Измеряем пинг лобби сервера
-                    var lobbyIp = _lobbyIp.Split(':')[0];
-                    _ = MeasureLobbyPing(lobbyIp);
+                    Debug.WriteLine($"✅ UDP соединение найдено: {udpConnection.RemoteAddress}:{udpConnection.RemotePort}");
                 }
                 else
                 {
-                    LobbyStatusText.Text = "Не подключено";
-                    LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
-                    
-                    LobbyIpText.Text = "Не определен";
-                    LobbyIpText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
-                    
-                    LobbyServerText.Text = "Не определен";
-                    LobbyServerText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
-                    
-                    LobbyPingText.Text = "Не измерен";
-                    LobbyPingText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
-                    
-                    LobbyRegionText.Text = "Не определен";
-                    LobbyRegionText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
-                    
-                    CopyLobbyIpButton.Visibility = Visibility.Collapsed;
+                    Debug.WriteLine("⚠️ UDP соединение не найдено");
                 }
+
+                // Обновляем UI
+                await UpdateUIAsync(tcpConnection, udpConnection);
                 
-                // Обновляем игру
-                if (hasGame)
-                {
-                    GameStatusText.Text = "Подключено";
-                    GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // Green
-                    
-                    GameIpText.Text = _gameIp;
-                    GameIpText.Foreground = new SolidColorBrush(Colors.White);
-                    
-                    GameServerText.Text = _gameServer;
-                    GameServerText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x6B, 0x35)); // Orange
-                    
-                    // Обновляем регион для игры
-                    GameRegionText.Text = DetermineRegion(_gameServer);
-                    GameRegionText.Foreground = new SolidColorBrush(Colors.White);
-                    
-                    CopyGameIpButton.Visibility = Visibility.Visible;
-                    
-                    // Измеряем пинг игрового сервера
-                    var gameIp = _gameIp.Split(':')[0];
-                    _ = MeasureGamePing(gameIp);
-                }
-                else
-                {
-                    GameStatusText.Text = "Не подключено";
-                    GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
-                    
-                    GameIpText.Text = "Не определен";
-                    GameIpText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
-                    
-                    GameServerText.Text = "Не определен";
-                    GameServerText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
-                    
-                    GamePingText.Text = "Не измерен";
-                    GamePingText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
-                    
-                    GameRegionText.Text = "Не определен";
-                    GameRegionText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
-                    
-                    CopyGameIpButton.Visibility = Visibility.Collapsed;
-                }
-                
-                // Обновляем время последнего обновления
-                UpdateLastUpdateDisplay();
-            });
-        }
-
-        private async Task MeasureLobbyPing(string ip)
-        {
-            try
-            {
-                using var ping = new Ping();
-                var reply = await ping.SendPingAsync(ip, 3000);
-                
-                Dispatcher.Invoke(() =>
-                {
-                    if (reply.Status == IPStatus.Success)
-                    {
-                        LobbyPingText.Text = $"{reply.RoundtripTime} мс";
-                        LobbyPingText.Foreground = GetPingColor(reply.RoundtripTime);
-                    }
-                    else
-                    {
-                        LobbyPingText.Text = "Недоступен";
-                        LobbyPingText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C));
-                    }
-                });
-            }
-            catch
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    LobbyPingText.Text = "Ошибка";
-                    LobbyPingText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C));
-                });
-            }
-        }
-        
-        private async Task MeasureGamePing(string ip)
-        {
-            try
-            {
-                using var ping = new Ping();
-                var reply = await ping.SendPingAsync(ip, 3000);
-                
-                Dispatcher.Invoke(() =>
-                {
-                    if (reply.Status == IPStatus.Success)
-                    {
-                        GamePingText.Text = $"{reply.RoundtripTime} мс";
-                        GamePingText.Foreground = GetPingColor(reply.RoundtripTime);
-                    }
-                    else
-                    {
-                        GamePingText.Text = "Недоступен";
-                        GamePingText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C));
-                    }
-                });
-            }
-            catch
-            {
-                Dispatcher.Invoke(() =>
-                {
-                    GamePingText.Text = "Ошибка";
-                    GamePingText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C));
-                });
-            }
-        }
-
-        private SolidColorBrush GetPingColor(long ms)
-        {
-            if (ms < 50) return new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // Green
-            if (ms < 100) return new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Yellow
-            if (ms < 200) return new SolidColorBrush(Color.FromRgb(0xFF, 0x8C, 0x00)); // Orange
-            return new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
-        }
-
-        private string DetermineRegion(string serverName)
-        {
-            if (serverName.Contains("GameLift"))
-            {
-                if (serverName.Contains("Frankfurt") || serverName.Contains("eu-central-1"))
-                    return "🎮 Центральная Европа (Игровой сервер)";
-                if (serverName.Contains("Ireland") || serverName.Contains("eu-west-1"))
-                    return "🎮 Европа (Ирландия) (Игровой сервер)";
-                if (serverName.Contains("London") || serverName.Contains("eu-west-2"))
-                    return "🎮 Европа (Лондон) (Игровой сервер)";
-                if (serverName.Contains("US East") || serverName.Contains("N. Virginia"))
-                    return "🎮 Северная Америка (Восток) (Игровой сервер)";
-                if (serverName.Contains("US West") || serverName.Contains("California") || serverName.Contains("Oregon"))
-                    return "🎮 Северная Америка (Запад) (Игровой сервер)";
-                if (serverName.Contains("Tokyo") || serverName.Contains("ap-northeast-1"))
-                    return "🎮 Азия (Токио) (Игровой сервер)";
-                if (serverName.Contains("Singapore") || serverName.Contains("ap-southeast-1"))
-                    return "🎮 Азия (Сингапур) (Игровой сервер)";
-            }
-            
-            // Google серверы
-            if (serverName.Contains("Google"))
-            {
-                if (serverName.Contains("Калифорния") || serverName.Contains("California"))
-                    return "🌐 Google Cloud (США, Калифорния)";
-                return "🌐 Google Cloud";
-            }
-            
-            // Microsoft Azure
-            if (serverName.Contains("Microsoft") || serverName.Contains("Azure"))
-                return "🌐 Microsoft Azure";
-            
-            // Cloudflare
-            if (serverName.Contains("Cloudflare"))
-                return "🌐 Cloudflare";
-            
-            // Обычные серверы (лобби и другие)
-            if (serverName.Contains("US East") || serverName.Contains("N. Virginia"))
-                return "Северная Америка (Восток)";
-            if (serverName.Contains("US West") || serverName.Contains("California") || serverName.Contains("Oregon"))
-                return "Северная Америка (Запад)";
-            if (serverName.Contains("Europe") || serverName.Contains("Ireland") || serverName.Contains("Frankfurt") || serverName.Contains("London"))
-                return "Европа";
-            if (serverName.Contains("Asia") || serverName.Contains("Tokyo") || serverName.Contains("Seoul") || serverName.Contains("Mumbai") || serverName.Contains("Singapore"))
-                return "Азия";
-            if (serverName.Contains("Sydney"))
-                return "Океания";
-            if (serverName.Contains("China") || serverName.Contains("Beijing") || serverName.Contains("Ningxia"))
-                return "Китай";
-            if (serverName.Contains("Canada"))
-                return "Канада";
-            if (serverName.Contains("South America") || serverName.Contains("São Paulo"))
-                return "Южная Америка";
-            
-            return "Не определен";
-        }
-
-        private void RefreshButton_Click(object sender, RoutedEventArgs e)
-        {
-            _ = CheckConnection();
-        }
-
-        
-        private void CopyLobbyIpButton_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                var ipPort = LobbyIpText.Text;
-                if (!string.IsNullOrEmpty(ipPort) && ipPort != "Не определен")
-                {
-                    Clipboard.SetText(ipPort);
-                    MessageBox.Show($"IP:Порт лобби скопирован в буфер обмена:\n{ipPort}", 
-                        "Скопировано", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                UpdateLastUpdateTime();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при копировании: {ex.Message}", "Ошибка", 
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                Debug.WriteLine($"❌ Ошибка мониторинга: {ex.Message}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
             }
         }
-        
-        private void CopyGameIpButton_Click(object sender, RoutedEventArgs e)
+
+        private Process? GetDbdProcess()
         {
             try
             {
-                var ipPort = GameIpText.Text;
-                if (!string.IsNullOrEmpty(ipPort) && ipPort != "Не определен")
-                {
-                    Clipboard.SetText(ipPort);
-                    MessageBox.Show($"IP:Порт матча скопирован в буфер обмена:\n{ipPort}", 
-                        "Скопировано", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                var processes = Process.GetProcessesByName(DBD_PROCESS_NAME);
+                return processes.FirstOrDefault();
             }
-            catch (Exception ex)
+            catch
             {
-                MessageBox.Show($"Ошибка при копировании: {ex.Message}", "Ошибка", 
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                return null;
             }
         }
 
-
-
-        private void DebugButton_Click(object sender, RoutedEventArgs e)
-        {
-            ShowDebugInfo();
-        }
-
-
-        private async void ShowDebugInfo()
+        private async Task<ConnectionInfo?> GetTcpConnectionAsync(int processId)
         {
             try
             {
                 var connections = GetActiveTcpConnections();
-                var establishedConnections = connections.Where(c => c.State == TcpState.Established).ToList();
+                Debug.WriteLine($"Всего TCP соединений: {connections.Count}");
                 
-                var debugInfo = new StringBuilder();
-                debugInfo.AppendLine($"Всего соединений: {connections.Count}");
-                debugInfo.AppendLine($"Установленных соединений: {establishedConnections.Count}");
-                debugInfo.AppendLine();
-                debugInfo.AppendLine("Активные соединения:");
-                
-                foreach (var conn in establishedConnections.Take(10))
+                // DBD использует HTTPS (порт 443) для связи с серверами лобби/матчмейкинга
+                var dbdConnections = connections
+                    .Where(c => c.ProcessId == processId)
+                    .Where(c => c.State == TcpState.Established)
+                    .Where(c => !IsLocalAddress(c.RemoteAddress))
+                    .Where(c => c.RemotePort == 443) // DBD использует HTTPS
+                    .ToList();
+
+                Debug.WriteLine($"TCP соединений DBD на порту 443: {dbdConnections.Count}");
+
+                if (dbdConnections.Any())
                 {
-                    var ip = conn.RemoteEndPoint.Address.ToString();
-                    var port = conn.RemoteEndPoint.Port;
-                    var isAws = await IsAwsIpAsync(ip);
-                    debugInfo.AppendLine($"{ip}:{port} - AWS: {isAws}");
+                    // Проверяем, существует ли ещё предыдущее выбранное соединение
+                    if (!string.IsNullOrEmpty(_lastLobbyIp) && _lastLobbyPort > 0)
+                    {
+                        var existingConn = dbdConnections.FirstOrDefault(c => 
+                            c.RemoteAddress == _lastLobbyIp && c.RemotePort == _lastLobbyPort);
+                        
+                        if (existingConn != null)
+                        {
+                            Debug.WriteLine($"✅ Продолжаем использовать существующее TCP соединение: {existingConn.RemoteAddress}:{existingConn.RemotePort}");
+                            return await EnrichConnectionInfoAsync(existingConn);
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"⚠️ Предыдущее TCP соединение ({_lastLobbyIp}:{_lastLobbyPort}) больше не активно");
+                            _lastLobbyIp = null;
+                            _lastLobbyPort = 0;
+                        }
+                    }
+                    
+                    Debug.WriteLine($"Проверяем {dbdConnections.Count} соединений на принадлежность к AWS...");
+                    
+                    // Проверяем, есть ли соединения к AWS серверам
+                    foreach (var conn in dbdConnections)
+                    {
+                        // Проверяем, является ли IP адресом AWS
+                        var isAws = await AwsIpRangeManager.Instance.IsAwsIpAsync(conn.RemoteAddress);
+                        Debug.WriteLine($"  {conn.RemoteAddress}:{conn.RemotePort} - AWS: {isAws}");
+                        
+                        if (isAws)
+                        {
+                            Debug.WriteLine($"✅ Выбрано новое TCP соединение к AWS: {conn.RemoteAddress}:{conn.RemotePort}");
+                            _lastLobbyIp = conn.RemoteAddress;
+                            _lastLobbyPort = conn.RemotePort;
+                            var enriched = await EnrichConnectionInfoAsync(conn);
+                            Debug.WriteLine($"   Обогащенная информация: Region={enriched.Region}, Ping={enriched.Ping}ms");
+                            return enriched;
+                        }
+                    }
+                    
+                    // Если не нашли AWS, берем первое доступное соединение на 443
+                    var firstConn = dbdConnections.First();
+                    Debug.WriteLine($"⚠️ AWS не найден, выбрано первое соединение: {firstConn.RemoteAddress}:{firstConn.RemotePort}");
+                    _lastLobbyIp = firstConn.RemoteAddress;
+                    _lastLobbyPort = firstConn.RemotePort;
+                    return await EnrichConnectionInfoAsync(firstConn);
                 }
-                
-                MessageBox.Show(debugInfo.ToString(), "Отладочная информация", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                Debug.WriteLine("⚠️ Нет подходящих TCP соединений");
+                return null;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                Debug.WriteLine($"❌ Ошибка получения TCP соединений: {ex.Message}");
+                Debug.WriteLine($"Stack trace: {ex.StackTrace}");
+                return null;
             }
         }
 
-        private void CloseButton_Click(object sender, RoutedEventArgs e)
-        {
-            StopMonitoring();
-            Close();
-        }
-
-        protected override void OnClosed(EventArgs e)
-        {
-            StopMonitoring();
-            StopTimeUpdateTimer();
-            base.OnClosed(e);
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        public virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-        private string GetProcessNameByPort(int port)
+        private async Task<ConnectionInfo?> GetUdpConnectionAsync(int processId)
         {
             try
             {
-                // Используем netstat для получения информации о процессе
-                var startInfo = new ProcessStartInfo
+                // Пробуем получить UDP соединения через PowerShell
+                var udpFromPowerShell = await GetUdpConnectionsViaPowerShellAsync(processId);
+                if (udpFromPowerShell != null)
                 {
-                    FileName = "netstat",
-                    Arguments = "-ano",
-                    UseShellExecute = false,
+                    Debug.WriteLine($"Найдено UDP соединение через PowerShell: {udpFromPowerShell.RemoteAddress}:{udpFromPowerShell.RemotePort}");
+                    return await EnrichConnectionInfoAsync(udpFromPowerShell);
+                }
+
+                var connections = GetActiveUdpConnections();
+                
+                // Сначала пытаемся найти UDP с удаленным адресом (если есть)
+                var dbdConnection = connections
+                    .Where(c => c.ProcessId == processId)
+                    .Where(c => !string.IsNullOrEmpty(c.RemoteAddress) && c.RemoteAddress != "0.0.0.0")
+                    .Where(c => !IsLocalAddress(c.RemoteAddress))
+                    .OrderByDescending(c => c.RemotePort) // Предпочитаем порты выше
+                    .FirstOrDefault();
+
+                if (dbdConnection != null)
+                {
+                    Debug.WriteLine($"Найдено UDP соединение: {dbdConnection.RemoteAddress}:{dbdConnection.RemotePort}");
+                    return await EnrichConnectionInfoAsync(dbdConnection);
+                }
+
+                // Если не нашли с удаленным адресом
+                Debug.WriteLine("UDP соединения с удаленным адресом не найдены (это нормально для Windows netstat)");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка получения UDP соединений: {ex.Message}");
+                return null;
+            }
+        }
+
+        private async Task<ConnectionInfo?> GetUdpConnectionsViaPowerShellAsync(int processId)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -Command \"Get-NetUDPEndpoint | Where-Object {{ $_.OwningProcess -eq {processId} }} | Select-Object LocalAddress, LocalPort, RemoteAddress, RemotePort | ConvertTo-Json\"",
                     RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
                     CreateNoWindow = true
                 };
 
-                using var process = Process.Start(startInfo);
-                if (process == null) return "Неизвестно";
-
-                var output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-
-                var lines = output.Split('\n');
-                foreach (var line in lines)
+                using var process = Process.Start(psi);
+                if (process != null)
                 {
-                    // Ищем как LISTENING, так и ESTABLISHED соединения
-                    if (line.Contains($":{port} ") && (line.Contains("LISTENING") || line.Contains("ESTABLISHED")))
+                    var output = await process.StandardOutput.ReadToEndAsync();
+                    var error = await process.StandardError.ReadToEndAsync();
+                    await process.WaitForExitAsync();
+
+                    if (!string.IsNullOrWhiteSpace(output) && output.Contains("LocalAddress"))
                     {
+                        // Парсим JSON (простая обработка, можно улучшить)
+                        // Пока что PowerShell тоже не даст нам удаленные адреса для UDP
+                        //Debug.WriteLine($"PowerShell UDP output: {output}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка получения UDP через PowerShell: {ex.Message}");
+            }
+
+            return null;
+        }
+
+        private bool IsLocalAddress(string address)
+        {
+            if (string.IsNullOrEmpty(address)) return true;
+            
+            if (address.StartsWith("127.") || 
+                address.StartsWith("192.168.") || 
+                address.StartsWith("10.") ||
+                address.StartsWith("172.16.") ||
+                address.StartsWith("169.254.") ||
+                address == "0.0.0.0" ||
+                address == "::" ||
+                address == "::1")
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private async Task<ConnectionInfo> EnrichConnectionInfoAsync(ConnectionInfo connection)
+        {
+            // Измеряем пинг (только если еще не измерен)
+            if (connection.Ping < 0)
+            {
+                try
+                {
+                    var reply = await _pinger.SendPingAsync(connection.RemoteAddress, 2000);
+                    connection.Ping = reply.Status == IPStatus.Success ? reply.RoundtripTime : -1;
+                }
+                catch
+                {
+                    connection.Ping = -1;
+                }
+            }
+
+            // Определяем регион AWS
+            try
+            {
+                var region = await AwsIpRangeManager.Instance.GetAwsRegionAsync(connection.RemoteAddress);
+                var service = await AwsIpRangeManager.Instance.GetAwsServiceAsync(connection.RemoteAddress);
+                
+                Debug.WriteLine($"🌍 AWS Region lookup для {connection.RemoteAddress}: region={region}, service={service}");
+                
+                if (region != "Неизвестный" && region != "Unknown")
+                {
+                    connection.Region = FormatRegion(region);
+                    connection.ServerName = $"{service} - {region}";
+                }
+                else
+                {
+                    // Fallback: пробуем определить через ip-api.com
+                    Debug.WriteLine($"⚠️ AWS region не найден, пробуем ip-api.com...");
+                    var (regionName, countryCode) = await GetRegionViaIpApiAsync(connection.RemoteAddress);
+                    
+                    if (!string.IsNullOrEmpty(regionName))
+                    {
+                        connection.Region = regionName;
+                        connection.ServerName = $"Сервер - {regionName}";
+                        Debug.WriteLine($"✅ Регион определен через ip-api: {regionName}");
+                    }
+                    else
+                    {
+                        connection.Region = "Неизвестный регион";
+                        connection.ServerName = $"Сервер {connection.RemoteAddress}";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ Ошибка определения региона: {ex.Message}");
+                connection.Region = "Неизвестный регион";
+                connection.ServerName = $"Сервер {connection.RemoteAddress}";
+            }
+
+            return connection;
+        }
+
+        private async Task<(string regionName, string countryCode)> GetRegionViaIpApiAsync(string ip)
+        {
+            try
+            {
+                using var httpClient = new System.Net.Http.HttpClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(5);
+                
+                var response = await httpClient.GetStringAsync($"http://ip-api.com/json/{ip}?fields=status,country,countryCode,regionName,city");
+                
+                // Простой парсинг JSON (без зависимостей)
+                if (response.Contains("\"status\":\"success\""))
+                {
+                    var country = ExtractJsonValue(response, "country");
+                    var countryCode = ExtractJsonValue(response, "countryCode");
+                    var regionName = ExtractJsonValue(response, "regionName");
+                    var city = ExtractJsonValue(response, "city");
+                    
+                    var fullName = "";
+                    if (!string.IsNullOrEmpty(city) && !string.IsNullOrEmpty(regionName))
+                        fullName = $"{GetFlag(countryCode)} {city}, {regionName}, {country}";
+                    else if (!string.IsNullOrEmpty(regionName))
+                        fullName = $"{GetFlag(countryCode)} {regionName}, {country}";
+                    else
+                        fullName = $"{GetFlag(countryCode)} {country}";
+                    
+                    return (fullName, countryCode);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка ip-api: {ex.Message}");
+            }
+            
+            return ("", "");
+        }
+
+        private string ExtractJsonValue(string json, string key)
+        {
+            try
+            {
+                var searchKey = $"\"{key}\":\"";
+                var startIndex = json.IndexOf(searchKey);
+                if (startIndex < 0) return "";
+                
+                startIndex += searchKey.Length;
+                var endIndex = json.IndexOf("\"", startIndex);
+                if (endIndex < 0) return "";
+                
+                return json.Substring(startIndex, endIndex - startIndex);
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private string GetFlag(string countryCode)
+        {
+            var flags = new Dictionary<string, string>
+            {
+                { "US", "🇺🇸" }, { "GB", "🇬🇧" }, { "DE", "🇩🇪" }, { "FR", "🇫🇷" },
+                { "IE", "🇮🇪" }, { "SE", "🇸🇪" }, { "IT", "🇮🇹" }, { "JP", "🇯🇵" },
+                { "KR", "🇰🇷" }, { "SG", "🇸🇬" }, { "AU", "🇦🇺" }, { "IN", "🇮🇳" },
+                { "BR", "🇧🇷" }, { "CA", "🇨🇦" }, { "BH", "🇧🇭" }, { "ZA", "🇿🇦" },
+                { "HK", "🇭🇰" }, { "CN", "🇨🇳" }
+            };
+            
+            return flags.TryGetValue(countryCode, out var flag) ? flag : "🌍";
+        }
+
+        private string FormatRegion(string region)
+        {
+            var regionMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "us-east-1", "🇺🇸 US East (N. Virginia)" },
+                { "us-east-2", "🇺🇸 US East (Ohio)" },
+                { "us-west-1", "🇺🇸 US West (N. California)" },
+                { "us-west-2", "🇺🇸 US West (Oregon)" },
+                { "eu-west-1", "🇮🇪 EU West (Ireland)" },
+                { "eu-west-2", "🇬🇧 EU West (London)" },
+                { "eu-west-3", "🇫🇷 EU West (Paris)" },
+                { "eu-central-1", "🇩🇪 EU Central (Frankfurt)" },
+                { "eu-north-1", "🇸🇪 EU North (Stockholm)" },
+                { "eu-south-1", "🇮🇹 EU South (Milan)" },
+                { "ap-northeast-1", "🇯🇵 Asia Pacific (Tokyo)" },
+                { "ap-northeast-2", "🇰🇷 Asia Pacific (Seoul)" },
+                { "ap-northeast-3", "🇯🇵 Asia Pacific (Osaka)" },
+                { "ap-southeast-1", "🇸🇬 Asia Pacific (Singapore)" },
+                { "ap-southeast-2", "🇦🇺 Asia Pacific (Sydney)" },
+                { "ap-south-1", "🇮🇳 Asia Pacific (Mumbai)" },
+                { "sa-east-1", "🇧🇷 South America (São Paulo)" },
+                { "ca-central-1", "🇨🇦 Canada (Central)" },
+                { "me-south-1", "🇧🇭 Middle East (Bahrain)" },
+                { "af-south-1", "🇿🇦 Africa (Cape Town)" },
+                { "ap-east-1", "🇭🇰 Asia Pacific (Hong Kong)" },
+                { "cn-north-1", "🇨🇳 China (Beijing)" },
+                { "cn-northwest-1", "🇨🇳 China (Ningxia)" }
+            };
+
+            return regionMap.TryGetValue(region, out var formatted) ? formatted : region;
+        }
+
+        #endregion
+
+        #region Network Info Retrieval
+
+        private List<ConnectionInfo> GetActiveTcpConnections()
+        {
+            var connections = new List<ConnectionInfo>();
+
+            // Пытаемся через WMI
+            try
+            {
+                using var searcher = new ManagementObjectSearcher(
+                    "root\\StandardCimv2",
+                    "SELECT * FROM MSFT_NetTCPConnection WHERE State = 5"); // 5 = Established
+                
+                using var results = searcher.Get();
+                
+                foreach (ManagementObject obj in results)
+                {
+                    try
+                    {
+                        var connection = new ConnectionInfo
+                        {
+                            Protocol = "TCP",
+                            LocalAddress = obj["LocalAddress"]?.ToString() ?? "",
+                            LocalPort = Convert.ToInt32(obj["LocalPort"]),
+                            RemoteAddress = obj["RemoteAddress"]?.ToString() ?? "",
+                            RemotePort = Convert.ToInt32(obj["RemotePort"]),
+                            ProcessId = Convert.ToInt32(obj["OwningProcess"]),
+                            State = TcpState.Established
+                        };
+                        connections.Add(connection);
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка получения TCP соединений через WMI: {ex.Message}");
+            }
+
+            // Если WMI не сработал, пробуем через netstat
+            if (connections.Count == 0)
+            {
+                try
+                {
+                    connections = GetTcpConnectionsFromNetstat();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Ошибка получения TCP соединений через netstat: {ex.Message}");
+                }
+            }
+
+            return connections;
+        }
+
+        private List<ConnectionInfo> GetTcpConnectionsFromNetstat()
+        {
+            var connections = new List<ConnectionInfo>();
+            
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "netstat",
+                    Arguments = "-ano -p TCP",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(psi);
+                if (process != null)
+                {
+                    var output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+
+                    var lines = output.Split('\n');
+                    foreach (var line in lines)
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        
                         var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-                        if (parts.Length >= 5 && int.TryParse(parts[4], out int pid))
+                        
+                        // Формат: TCP  LocalAddress:Port  RemoteAddress:Port  State  PID
+                        if (parts.Length >= 5 && parts[0] == "TCP")
                         {
                             try
                             {
-                                var proc = Process.GetProcessById(pid);
-                                Debug.WriteLine($"Найден процесс {proc.ProcessName} (PID: {pid}) для порта {port}");
-                                return proc.ProcessName;
+                                var state = parts[3];
+                                if (state != "ESTABLISHED") continue;
+
+                                var processId = int.Parse(parts[4]);
+                                
+                                var localParts = parts[1].Split(':');
+                                var remoteParts = parts[2].Split(':');
+
+                                var localAddress = localParts.Length > 1 
+                                    ? string.Join(":", localParts.Take(localParts.Length - 1))
+                                    : localParts[0];
+                                var remoteAddress = remoteParts.Length > 1
+                                    ? string.Join(":", remoteParts.Take(remoteParts.Length - 1))
+                                    : remoteParts[0];
+
+                                // Очищаем IPv6 скобки если есть
+                                localAddress = localAddress.Trim('[', ']');
+                                remoteAddress = remoteAddress.Trim('[', ']');
+
+                                var connection = new ConnectionInfo
+                                {
+                                    Protocol = "TCP",
+                                    LocalAddress = localAddress,
+                                    LocalPort = int.Parse(localParts[^1]),
+                                    RemoteAddress = remoteAddress,
+                                    RemotePort = int.Parse(remoteParts[^1]),
+                                    ProcessId = processId,
+                                    State = TcpState.Established
+                                };
+
+                                connections.Add(connection);
                             }
-                            catch
+                            catch (Exception ex)
                             {
-                                Debug.WriteLine($"Не удалось получить процесс с PID {pid} для порта {port}");
-                                return $"PID {pid}";
+                                Debug.WriteLine($"Ошибка парсинга строки netstat TCP: {line}, {ex.Message}");
                             }
                         }
                     }
                 }
-
-                Debug.WriteLine($"Процесс для порта {port} не найден");
-                return "Неизвестно";
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Ошибка при определении процесса по порту {port}: {ex.Message}");
-                return "Ошибка";
+                Debug.WriteLine($"Ошибка выполнения netstat TCP: {ex.Message}");
             }
+
+            return connections;
         }
 
-        private bool IsDeadByDaylightProcess(int port)
+        private List<ConnectionInfo> GetActiveUdpConnections()
         {
-            var processName = GetProcessNameByPort(port);
-            Debug.WriteLine($"Проверяем процесс для порта {port}: {processName}");
-            
-            // Проверяем, что соединение идет от DeadByDaylight
-            bool isDbd = processName.Equals("DeadByDaylight", StringComparison.OrdinalIgnoreCase) ||
-                        processName.Equals("DeadByDaylight-Win64-Shipping", StringComparison.OrdinalIgnoreCase);
-            
-            // Если процесс не определен или неизвестен, но это не исключенный сервер, 
-            // то считаем что это может быть игровое соединение
-            if (!isDbd && (processName == "Неизвестно" || processName == "Ошибка"))
+            var connections = new List<ConnectionInfo>();
+
+            try
             {
-                Debug.WriteLine($"Процесс не определен для порта {port}, но не исключаем соединение");
-                return true; // Временно разрешаем неизвестные процессы
+                using var searcher = new ManagementObjectSearcher(
+                    "SELECT * FROM MSFT_NetUDPEndpoint");
+                
+                using var results = searcher.Get();
+                
+                foreach (ManagementObject obj in results)
+                {
+                    try
+                    {
+                        var connection = new ConnectionInfo
+                        {
+                            Protocol = "UDP",
+                            LocalAddress = obj["LocalAddress"]?.ToString() ?? "",
+                            LocalPort = Convert.ToInt32(obj["LocalPort"]),
+                            RemoteAddress = "", // UDP не имеет удаленного адреса в статике
+                            RemotePort = 0,
+                            ProcessId = Convert.ToInt32(obj["OwningProcess"])
+                        };
+                        connections.Add(connection);
+                    }
+                    catch { }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка получения UDP соединений через WMI: {ex.Message}");
+            }
+
+            // Для UDP пытаемся получить дополнительную информацию через netstat
+            try
+            {
+                var processId = Process.GetProcessesByName(DBD_PROCESS_NAME).FirstOrDefault()?.Id;
+                if (processId.HasValue)
+                {
+                    var udpConnections = GetUdpConnectionsFromNetstat(processId.Value);
+                    connections.AddRange(udpConnections);
+                }
+            }
+            catch { }
+
+            return connections;
+        }
+
+        private List<ConnectionInfo> GetUdpConnectionsFromNetstat(int targetProcessId)
+        {
+            var connections = new List<ConnectionInfo>();
+            
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "netstat",
+                    Arguments = "-ano -p UDP",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(psi);
+                if (process != null)
+                {
+                    var output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+
+                    var lines = output.Split('\n');
+                    foreach (var line in lines)
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        
+                        var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                        
+                        // Формат UDP в netstat: UDP  LocalAddress:Port  *:*  PID
+                        // Или: UDP  LocalAddress:Port  RemoteAddress:Port  PID (редко)
+                        if (parts.Length >= 4 && parts[0] == "UDP")
+                        {
+                            try
+                            {
+                                var processId = int.Parse(parts[^1]);
+                                if (processId == targetProcessId)
+                                {
+                                    var localParts = parts[1].Split(':');
+                                    
+                                    var localAddress = localParts.Length > 1 
+                                        ? string.Join(":", localParts.Take(localParts.Length - 1))
+                                        : localParts[0];
+                                    
+                                    // Очищаем IPv6 скобки если есть
+                                    localAddress = localAddress.Trim('[', ']');
+
+                                    // Проверяем есть ли удаленный адрес (не *:*)
+                                    string remoteAddress = "";
+                                    int remotePort = 0;
+                                    
+                                    if (parts.Length > 2 && parts[2] != "*:*" && parts[2].Contains(':'))
+                                    {
+                                        var remoteParts = parts[2].Split(':');
+                                        remoteAddress = remoteParts.Length > 1 
+                                            ? string.Join(":", remoteParts.Take(remoteParts.Length - 1))
+                                            : remoteParts[0];
+                                        remoteAddress = remoteAddress.Trim('[', ']');
+                                        
+                                        if (int.TryParse(remoteParts[^1], out var port))
+                                        {
+                                            remotePort = port;
+                                        }
+                                    }
+
+                                    var connection = new ConnectionInfo
+                                    {
+                                        Protocol = "UDP",
+                                        LocalAddress = localAddress,
+                                        LocalPort = int.Parse(localParts[^1]),
+                                        RemoteAddress = remoteAddress,
+                                        RemotePort = remotePort,
+                                        ProcessId = processId
+                                    };
+
+                                    // Для UDP добавляем все соединения, даже без удаленного адреса
+                                    // Потому что UDP может показывать только локальные порты
+                                    connections.Add(connection);
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"Ошибка парсинга строки netstat UDP: {line}, {ex.Message}");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Ошибка получения UDP соединений из netstat: {ex.Message}");
+            }
+
+            return connections;
+        }
+
+        #endregion
+
+        #region UI Updates
+
+        private Task UpdateUIAsync(ConnectionInfo? tcpConnection, ConnectionInfo? udpConnection)
+        {
+            Debug.WriteLine($"🔄 Обновление UI: TCP={tcpConnection != null}, UDP={udpConnection != null}");
+            
+            _currentLobbyConnection = tcpConnection;
+            _currentGameConnection = udpConnection;
+
+            // Обновляем TCP (лобби)
+            if (tcpConnection != null)
+            {
+                Debug.WriteLine($"   TCP: {tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}, Region={tcpConnection.Region}, Ping={tcpConnection.Ping}ms");
+                
+                LobbyStatusText.Text = "Подключено";
+                LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // Green
+                
+                LobbyIpText.Text = $"{tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}";
+                CopyLobbyIpButton.Visibility = Visibility.Visible;
+                
+                LobbyServerText.Text = tcpConnection.ServerName;
+                LobbyRegionText.Text = tcpConnection.Region;
+                
+                LobbyPingText.Text = tcpConnection.Ping >= 0 
+                    ? $"{tcpConnection.Ping} ms" 
+                    : "Не измерен";
+                LobbyPingText.Foreground = GetPingColor(tcpConnection.Ping);
+                
+                Debug.WriteLine($"   ✅ UI лобби обновлен");
+            }
+            else
+            {
+                LobbyStatusText.Text = "Не подключено";
+                LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
+                
+                LobbyIpText.Text = "Не определен";
+                CopyLobbyIpButton.Visibility = Visibility.Collapsed;
+                
+                LobbyServerText.Text = "Не определен";
+                LobbyRegionText.Text = "Не определен";
+                LobbyPingText.Text = "Не измерен";
+                LobbyPingText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
+                
+                Debug.WriteLine($"   ⚠️ TCP отсутствует, показываем 'Не подключено'");
+                
+                // Сбрасываем сохраненный IP лобби
+                _lastLobbyIp = null;
+                _lastLobbyPort = 0;
+            }
+
+            // Обновляем UDP (игра)
+            if (udpConnection != null)
+            {
+                GameStatusText.Text = "Подключено";
+                GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // Green
+                
+                GameIpText.Text = $"{udpConnection.RemoteAddress}:{udpConnection.RemotePort}";
+                CopyGameIpButton.Visibility = Visibility.Visible;
+                
+                GameServerText.Text = udpConnection.ServerName;
+                GameRegionText.Text = udpConnection.Region;
+                
+                // Проверяем, изменился ли IP адрес игрового сервера
+                // Сравниваем с последним сохраненным IP игры (не с GameLift хостом!)
+                bool ipChanged = _lastGameIp != udpConnection.RemoteAddress || 
+                                 _lastGamePort != udpConnection.RemotePort;
+                
+                Debug.WriteLine($"🔍 Проверка изменения IP: last={_lastGameIp}:{_lastGamePort}, current={udpConnection.RemoteAddress}:{udpConnection.RemotePort}, changed={ipChanged}");
+                
+                // Обновляем пинг ТОЛЬКО если IP изменился (чтобы избежать моргания)
+                // Иначе фоновый мониторинг уже обновляет пинг каждую секунду
+                if (ipChanged)
+                {
+                    Debug.WriteLine($"🔄 IP игрового сервера изменился, перезапускаем пингер");
+                    
+                    // Сохраняем новый IP ДО запуска пингера
+                    _lastGameIp = udpConnection.RemoteAddress;
+                    _lastGamePort = udpConnection.RemotePort;
+                    
+                    // Показываем начальное значение пинга или "Измеряется..."
+                    if (udpConnection.Ping >= 0)
+                    {
+                        GamePingText.Text = $"{udpConnection.Ping} ms";
+                        GamePingText.Foreground = GetPingColor(udpConnection.Ping);
+                    }
+                    else
+                    {
+                        GamePingText.Text = "Измеряется...";
+                        GamePingText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Yellow
+                    }
+                    
+                    // Запускаем DispatcherTimer для мониторинга пинга (остановит старый если был)
+                    StartPingMonitoring(udpConnection.RemoteAddress, udpConnection.RemotePort);
+                }
+                else
+                {
+                    Debug.WriteLine($"✅ IP игрового сервера не изменился, продолжаем использовать текущий пинг");
+                }
+                // Если IP не изменился, просто продолжаем мониторинг (ничего не делаем)
+                // Фоновый таймер пинга уже обновляет GamePingText каждую секунду
+            }
+            else
+            {
+                // Нет UDP соединения - сбрасываем статус игры
+                Debug.WriteLine("⚠️ UDP соединение не найдено - сбрасываем статус игры");
+                
+                GameStatusText.Text = "Не подключено";
+                GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
+                
+                GameIpText.Text = "Не определен";
+                CopyGameIpButton.Visibility = Visibility.Collapsed;
+                
+                GameServerText.Text = "Не определен";
+                GameRegionText.Text = "Не определен";
+                GamePingText.Text = "Не измерен";
+                GamePingText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
+                
+                // Сбрасываем сохраненный IP игры
+                _lastGameIp = null;
+                _lastGamePort = 0;
+                
+                // Останавливаем мониторинг пинга
+                StopPingMonitoring();
             }
             
-            return isDbd;
+            return Task.CompletedTask;
         }
-    }
 
-    public class UdpConnectionInfo
-    {
-        public IPEndPoint LocalEndPoint { get; set; } = new IPEndPoint(IPAddress.Any, 0);
-        public IPEndPoint RemoteEndPoint { get; set; } = new IPEndPoint(IPAddress.Any, 0);
+        private void UpdateNoConnection()
+        {
+            LobbyStatusText.Text = "Игра не запущена";
+            LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)); // Gray
+            LobbyIpText.Text = "Не определен";
+            CopyLobbyIpButton.Visibility = Visibility.Collapsed;
+            LobbyServerText.Text = "Не определен";
+            LobbyRegionText.Text = "Не определен";
+            LobbyPingText.Text = "Не измерен";
+
+            GameStatusText.Text = "Игра не запущена";
+            GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)); // Gray
+            GameIpText.Text = "Не определен";
+            CopyGameIpButton.Visibility = Visibility.Collapsed;
+            GameServerText.Text = "Не определен";
+            GameRegionText.Text = "Не определен";
+            GamePingText.Text = "Не измерен";
+            
+            // Сбрасываем сохраненные IP
+            _lastLobbyIp = null;
+            _lastLobbyPort = 0;
+            _lastGameIp = null;
+            _lastGamePort = 0;
+            
+            // Очищаем отслеживаемые порты
+            _monitoredUdpPorts.Clear();
+            _udpMonitorStarted = false;
+            
+            // Останавливаем фоновый мониторинг пинга
+            StopPingMonitoring();
+        }
+
+        private void UpdateLastUpdateTime()
+        {
+            LastUpdateText.Text = $"{DateTime.Now:dd.MM.yyyy HH:mm:ss}";
+        }
+
+        private SolidColorBrush GetPingColor(long ping)
+        {
+            if (ping < 0) return new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)); // Gray
+            if (ping < 80) return new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // Green
+            if (ping < 130) return new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Yellow
+            if (ping < 250) return new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
+            return new SolidColorBrush(Color.FromRgb(0x6F, 0x42, 0xC1)); // Purple
+        }
+
+        #endregion
+
+        #region Background Ping Monitoring
+
+        // Маппинг AWS регионов на GameLift хосты (точно как на главной странице)
+        // hosts[0] - основной endpoint, hosts[1] - специальный ping endpoint
+        private readonly Dictionary<string, string[]> _awsRegionToGameLiftHosts = new()
+        {
+            // Europe
+            { "eu-west-2", new[]{ "gamelift.eu-west-2.amazonaws.com", "gamelift-ping.eu-west-2.api.aws" } },      // London
+            { "eu-west-1", new[]{ "gamelift.eu-west-1.amazonaws.com", "gamelift-ping.eu-west-1.api.aws" } },      // Ireland
+            { "eu-central-1", new[]{ "gamelift.eu-central-1.amazonaws.com", "gamelift-ping.eu-central-1.api.aws" } }, // Frankfurt
+            
+            // Americas
+            { "us-east-1", new[]{ "gamelift.us-east-1.amazonaws.com", "gamelift-ping.us-east-1.api.aws" } },      // N. Virginia
+            { "us-east-2", new[]{ "gamelift.us-east-2.amazonaws.com", "gamelift-ping.us-east-2.api.aws" } },      // Ohio
+            { "us-west-1", new[]{ "gamelift.us-west-1.amazonaws.com", "gamelift-ping.us-west-1.api.aws" } },      // N. California
+            { "us-west-2", new[]{ "gamelift.us-west-2.amazonaws.com", "gamelift-ping.us-west-2.api.aws" } },      // Oregon
+            { "ca-central-1", new[]{ "gamelift.ca-central-1.amazonaws.com", "gamelift-ping.ca-central-1.api.aws" } }, // Canada
+            { "sa-east-1", new[]{ "gamelift.sa-east-1.amazonaws.com", "gamelift-ping.sa-east-1.api.aws" } },      // São Paulo
+            
+            // Asia Pacific
+            { "ap-northeast-1", new[]{ "gamelift.ap-northeast-1.amazonaws.com", "gamelift-ping.ap-northeast-1.api.aws" } }, // Tokyo
+            { "ap-northeast-2", new[]{ "gamelift.ap-northeast-2.amazonaws.com", "gamelift-ping.ap-northeast-2.api.aws" } }, // Seoul
+            { "ap-south-1", new[]{ "gamelift.ap-south-1.amazonaws.com", "gamelift-ping.ap-south-1.api.aws" } },        // Mumbai
+            { "ap-southeast-1", new[]{ "gamelift.ap-southeast-1.amazonaws.com", "gamelift-ping.ap-southeast-1.api.aws" } }, // Singapore
+            { "ap-east-1", new[]{ "ec2.ap-east-1.amazonaws.com", "gamelift-ping.ap-east-1.api.aws" } },               // Hong Kong
+            { "ap-southeast-2", new[]{ "gamelift.ap-southeast-2.amazonaws.com", "gamelift-ping.ap-southeast-2.api.aws" } }, // Sydney
+            
+            // China
+            { "cn-north-1", new[]{ "gamelift.cn-north-1.amazonaws.com.cn" } },     // Beijing
+            { "cn-northwest-1", new[]{ "gamelift.cn-northwest-1.amazonaws.com.cn" } }, // Ningxia
+        };
+
+        /// <summary>
+        /// Запускает фоновый мониторинг пинга для игрового сервера
+        /// Пингует GameLift хост того же AWS региона (определяет регион через DNS hostname)
+        /// Использует DispatcherTimer для гарантии синхронности
+        /// </summary>
+        private async void StartPingMonitoring(string ipAddress, int port)
+        {
+            Debug.WriteLine($"🎬 Запрос на запуск пингера для {ipAddress}:{port}");
+            
+            // Останавливаем старый таймер если был
+            StopPingMonitoring();
+            
+            Debug.WriteLine($"✅ Старый пингер остановлен, запускаем новый");
+
+            _currentGameServerIp = ipAddress;
+            _currentGameServerPort = port;
+
+            // Определяем AWS регион через Reverse DNS (PTR запись)
+            string awsRegion = await GetAwsRegionFromDnsAsync(ipAddress);
+            
+            Debug.WriteLine($"🌍 Игровой сервер {ipAddress} → регион: {awsRegion}");
+
+            // Ищем соответствующий GameLift хост (точно как на главной странице)
+            if (string.IsNullOrEmpty(awsRegion) || 
+                !_awsRegionToGameLiftHosts.TryGetValue(awsRegion, out var hosts) || hosts.Length == 0)
+            {
+                Debug.WriteLine($"⚠️ Не найден GameLift хост для региона '{awsRegion}', используем прямой пинг");
+                _currentGameServerIp = ipAddress; // Fallback - пингуем сам IP
+            }
+            else
+            {
+                // Пингуем hosts[0] как на главной странице
+                _currentGameServerIp = hosts[0];
+                Debug.WriteLine($"✅ Будем пинговать GameLift хост: {_currentGameServerIp}");
+            }
+
+            Debug.WriteLine($"🏓 Запуск DispatcherTimer пинга к {_currentGameServerIp} (строго 1 раз/сек)");
+
+            // Создаём отдельный Ping объект для фонового мониторинга
+            _backgroundPinger = new Ping();
+
+            // Создаём DispatcherTimer (работает в UI потоке, гарантирует синхронность)
+            _pingTimer = new DispatcherTimer 
+            { 
+                Interval = TimeSpan.FromSeconds(1) 
+            };
+            _pingTimer.Tick += async (_, __) => await UpdatePingAsync();
+            _pingTimer.Start();
+            
+            Debug.WriteLine($"✅ DispatcherTimer успешно запущен!");
+            
+            // Выполняем первый пинг сразу (не ждём 1 секунду)
+            _ = UpdatePingAsync();
+        }
+
+        /// <summary>
+        /// Определяет AWS регион по hostname через Reverse DNS
+        /// Например: ec2-63-176-61-172.eu-central-1.compute.amazonaws.com → eu-central-1
+        /// </summary>
+        private async Task<string> GetAwsRegionFromDnsAsync(string ipAddress)
+        {
+            try
+            {
+                Debug.WriteLine($"🔍 Reverse DNS lookup для {ipAddress}...");
+                
+                var hostEntry = await Dns.GetHostEntryAsync(ipAddress);
+                var hostname = hostEntry.HostName;
+                
+                Debug.WriteLine($"   Hostname: {hostname}");
+                
+                // Парсим AWS регион из hostname
+                // Формат: ec2-X-X-X-X.REGION.compute.amazonaws.com
+                // Или: X-X-X-X.REGION.elb.amazonaws.com
+                if (hostname.Contains(".amazonaws.com"))
+                {
+                    var parts = hostname.Split('.');
+                    
+                    // Ищем часть которая выглядит как AWS регион (содержит дефисы и цифру)
+                    foreach (var part in parts)
+                    {
+                        // AWS регион формат: us-east-1, eu-central-1, ap-northeast-2 и т.д.
+                        if (part.Contains('-') && System.Text.RegularExpressions.Regex.IsMatch(part, @"^[a-z]{2}-[a-z]+-\d+$"))
+                        {
+                            Debug.WriteLine($"✅ Найден AWS регион из DNS: {part}");
+                            return part;
+                        }
+                    }
+                    
+                    Debug.WriteLine($"⚠️ AWS hostname найден, но регион не распознан");
+                }
+                else
+                {
+                    Debug.WriteLine($"⚠️ Hostname не AWS ({hostname})");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"⚠️ Reverse DNS ошибка: {ex.Message}");
+            }
+            
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Останавливает фоновый мониторинг пинга
+        /// Просто и надёжно: останавливает DispatcherTimer
+        /// </summary>
+        private void StopPingMonitoring()
+        {
+            if (_pingTimer == null)
+            {
+                return; // Таймер не работает
+            }
+            
+            Debug.WriteLine($"🛑 Остановка DispatcherTimer пинга");
+            
+            // Останавливаем таймер
+            _pingTimer.Stop();
+            _pingTimer = null;
+            
+            // Освобождаем ресурсы
+            if (_backgroundPinger != null)
+            {
+                _backgroundPinger.Dispose();
+                _backgroundPinger = null;
+            }
+            
+            _currentGameServerIp = null;
+            _currentGameServerPort = 0;
+            
+            Debug.WriteLine($"✅ DispatcherTimer остановлен");
+        }
+
+        /// <summary>
+        /// Обновляет пинг к игровому серверу (вызывается DispatcherTimer каждую секунду)
+        /// Работает в UI потоке, гарантирует синхронность
+        /// </summary>
+        private async Task UpdatePingAsync()
+        {
+            if (string.IsNullOrEmpty(_currentGameServerIp) || _backgroundPinger == null)
+            {
+                Debug.WriteLine("⚠️ UpdatePingAsync: пингер не инициализирован или IP пуст");
+                return;
+            }
+
+            long ping = -1;
+            
+            try
+            {
+                Debug.WriteLine($"🏓 Попытка пинга к {_currentGameServerIp}...");
+                
+                // Простой ICMP ping к GameLift хосту (как на главной странице)
+                var reply = await _backgroundPinger.SendPingAsync(_currentGameServerIp, 2000);
+                
+                if (reply.Status == IPStatus.Success)
+                {
+                    ping = reply.RoundtripTime;
+                    Debug.WriteLine($"✅ Пинг успешен: {ping}ms");
+                }
+                else
+                {
+                    Debug.WriteLine($"❌ Хост {_currentGameServerIp} не отвечает: {reply.Status}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"❌ Ошибка пинга: {ex.Message}");
+                Debug.WriteLine($"   StackTrace: {ex.StackTrace}");
+            }
+
+            // Обновляем UI (уже в UI потоке благодаря DispatcherTimer!)
+            // ВАЖНО: обновляем только при успешном пинге, чтобы избежать моргания при временных неудачах
+            if (ping >= 0)
+            {
+                GamePingText.Text = $"{ping} ms";
+                GamePingText.Foreground = GetPingColor(ping);
+                Debug.WriteLine($"   ✅ UI обновлен: {ping}ms");
+            }
+            else
+            {
+                // Если пинг не удалось измерить - оставляем предыдущее значение
+                // Это предотвращает моргание "50ms" -> "Не измерен" -> "50ms"
+                Debug.WriteLine($"   ⚠️ Пинг не удался, оставляем предыдущее значение");
+            }
+        }
+
+        #endregion
+
+        #region Event Handlers
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private async void RefreshButton_Click(object sender, RoutedEventArgs e)
+        {
+            await MonitorConnectionsAsync();
+        }
+
+        private void CopyLobbyIpButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentLobbyConnection != null)
+            {
+                var text = $"{_currentLobbyConnection.RemoteAddress}:{_currentLobbyConnection.RemotePort}";
+                Clipboard.SetText(text);
+                ShowCopyNotification("Лобби IP скопирован в буфер обмена");
+            }
+        }
+
+        private void CopyGameIpButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentGameConnection != null)
+            {
+                var text = $"{_currentGameConnection.RemoteAddress}:{_currentGameConnection.RemotePort}";
+                Clipboard.SetText(text);
+                ShowCopyNotification("IP матча скопирован в буфер обмена");
+            }
+        }
+
+        private void ShowCopyNotification(string message)
+        {
+            // Можно добавить всплывающее уведомление, пока просто меняем текст временно
+            var originalText = LastUpdateText.Text;
+            LastUpdateText.Text = message;
+            LastUpdateText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45));
+            
+            Task.Delay(2000).ContinueWith(_ => 
+            {
+                Dispatcher.Invoke(() => 
+                {
+                    LastUpdateText.Text = originalText;
+                    LastUpdateText.Foreground = new SolidColorBrush(Colors.White);
+                });
+            });
+        }
+
+        #endregion
+
+        #region Helper Classes
+
+        private class ConnectionInfo
+        {
+            public string Protocol { get; set; } = "";
+            public string LocalAddress { get; set; } = "";
+            public int LocalPort { get; set; }
+            public string RemoteAddress { get; set; } = "";
+            public int RemotePort { get; set; }
+            public int ProcessId { get; set; }
+            public TcpState State { get; set; }
+            public long Ping { get; set; } = -1;
+            public string Region { get; set; } = "";
+            public string ServerName { get; set; } = "";
+        }
+
+        #endregion
     }
 }

@@ -69,6 +69,7 @@ namespace AWSServerSelector
 
         private DispatcherTimer? _pingTimer;
         private Ping? _pinger;
+        private ConnectionInfoWindow? _connectionInfoWindow;
         
         public enum ApplyMode { Gatekeep, UniversalRedirect }
         public enum BlockMode { Both, OnlyPing, OnlyService }
@@ -1788,11 +1789,29 @@ namespace AWSServerSelector
         {
             try
             {
-                var connectionWindow = new ConnectionInfoWindow
+                // Если окно уже открыто, активируем его
+                if (_connectionInfoWindow != null && _connectionInfoWindow.IsLoaded)
                 {
-                    Owner = this
+                    _connectionInfoWindow.Activate();
+                    return;
+                }
+
+                // Создаем новое окно
+                _connectionInfoWindow = new ConnectionInfoWindow();
+
+                // Позиционируем окно справа от главного окна
+                _connectionInfoWindow.Left = this.Left + this.ActualWidth + 2; // 2px отступ
+                _connectionInfoWindow.Top = this.Top;
+
+                // Подписываемся на закрытие окна для очистки ссылки и активации главного окна
+                _connectionInfoWindow.Closed += (s, args) => 
+                {
+                    _connectionInfoWindow = null;
+                    // Активируем главное окно при закрытии дочернего
+                    this.Activate();
                 };
-                connectionWindow.Show();
+
+                _connectionInfoWindow.Show();
             }
             catch (Exception ex)
             {
