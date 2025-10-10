@@ -129,12 +129,18 @@
                 <DropShadowEffect Color="Black" BlurRadius="10" ShadowDepth="2" Opacity="0.3"/>
             </Border.Effect>
             <StackPanel>
-                <TextBlock Text="🌐 Информация о подключении" 
-                          FontSize="24" 
-                          FontWeight="Bold" 
-                          Foreground="White"
-                          HorizontalAlignment="Center"
-                          Style="{StaticResource ClearTextBlock}"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <TextBlock Text="🌐" 
+                              FontSize="24" 
+                              FontWeight="Normal" 
+                              Foreground="White"
+                              Style="{StaticResource ClearTextBlock}"/>
+                    <TextBlock Text=" Информация о подключении" 
+                              FontSize="24" 
+                              FontWeight="Bold" 
+                              Foreground="White"
+                              Style="{StaticResource ClearTextBlock}"/>
+                </StackPanel>
                 <TextBlock Text="Мониторинг активного подключения к серверу Dead by Daylight" 
                           FontSize="14" 
                           Foreground="#FFE0E0E0"
@@ -157,24 +163,32 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="20">
                     
-                    <!-- Current Connection Status -->
+                    <!-- Lobby Connection Status -->
                     <Border Background="{StaticResource SecondaryBrush}" 
                             CornerRadius="8" 
                             Padding="15" 
                             Margin="0,0,0,15">
                         <StackPanel>
-                            <TextBlock Text="📡 Статус подключения" 
-                                      FontSize="16" 
-                                      FontWeight="SemiBold" 
-                                      Foreground="{StaticResource TextBrush}"
-                                      Margin="0,0,0,10"
-                                      Style="{StaticResource ClearTextBlock}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="🏠" 
+                                          FontSize="16" 
+                                          FontWeight="Normal" 
+                                          Foreground="{StaticResource TextBrush}"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                                <TextBlock Text=" Статус подключения к лобби" 
+                                          FontSize="16" 
+                                          FontWeight="SemiBold" 
+                                          Foreground="{StaticResource TextBrush}"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                            </StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
                                 <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
@@ -186,7 +200,7 @@
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
-                                <TextBlock x:Name="ConnectionStatusText" 
+                                <TextBlock x:Name="LobbyStatusText" 
                                           Grid.Row="0" Grid.Column="1" 
                                           Text="Не подключено" 
                                           Foreground="{StaticResource ErrorBrush}"
@@ -195,27 +209,73 @@
                                           Style="{StaticResource ClearTextBlock}"/>
                                 
                                 <TextBlock Grid.Row="1" Grid.Column="0" 
-                                          Text="IP адрес:" 
+                                          Text="IP:Порт:" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
-                                <TextBlock x:Name="IpAddressText" 
-                                          Grid.Row="1" Grid.Column="1" 
+                                <Grid Grid.Row="1" Grid.Column="1" Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="LobbyIpText" 
+                                              Grid.Column="0"
+                                              Text="Не определен" 
+                                              Foreground="{StaticResource TextBrush}"
+                                              FontWeight="SemiBold"
+                                              VerticalAlignment="Center"
+                                              Style="{StaticResource ClearTextBlock}"/>
+                                    <Button x:Name="CopyLobbyIpButton" 
+                                            Grid.Column="1"
+                                            Content="📋" 
+                                            Width="30" 
+                                            Height="25"
+                                            FontSize="12"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Margin="5,0,0,0"
+                                            Click="CopyLobbyIpButton_Click"
+                                            ToolTip="Копировать IP:Порт лобби"
+                                            Cursor="Hand"
+                                            Visibility="Collapsed"/>
+                                </Grid>
+                                
+                                <TextBlock Grid.Row="2" Grid.Column="0" 
+                                          Text="Сервер:" 
+                                          Foreground="{StaticResource SubTextBrush}"
+                                          FontWeight="Medium"
+                                          Margin="0,0,10,5"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                                <TextBlock x:Name="LobbyServerText" 
+                                          Grid.Row="2" Grid.Column="1" 
                                           Text="Не определен" 
                                           Foreground="{StaticResource TextBrush}"
                                           FontWeight="SemiBold"
                                           Margin="0,0,0,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 
-                                <TextBlock Grid.Row="2" Grid.Column="0" 
-                                          Text="Сервер:" 
+                                <TextBlock Grid.Row="3" Grid.Column="0" 
+                                          Text="Пинг:" 
+                                          Foreground="{StaticResource SubTextBrush}"
+                                          FontWeight="Medium"
+                                          Margin="0,0,10,5"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                                <TextBlock x:Name="LobbyPingText" 
+                                          Grid.Row="3" Grid.Column="1" 
+                                          Text="Не измерен" 
+                                          Foreground="{StaticResource TextBrush}"
+                                          FontWeight="SemiBold"
+                                          Margin="0,0,0,5"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                                
+                                <TextBlock Grid.Row="4" Grid.Column="0" 
+                                          Text="Регион:" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,0"
                                           Style="{StaticResource ClearTextBlock}"/>
-                                <TextBlock x:Name="ServerNameText" 
-                                          Grid.Row="2" Grid.Column="1" 
+                                <TextBlock x:Name="LobbyRegionText" 
+                                          Grid.Row="4" Grid.Column="1" 
                                           Text="Не определен" 
                                           Foreground="{StaticResource TextBrush}"
                                           FontWeight="SemiBold"
@@ -224,18 +284,24 @@
                         </StackPanel>
                     </Border>
                     
-                    <!-- Connection Details -->
+                    <!-- Game Connection Status -->
                     <Border Background="{StaticResource SecondaryBrush}" 
                             CornerRadius="8" 
                             Padding="15" 
                             Margin="0,0,0,15">
                         <StackPanel>
-                            <TextBlock Text="🔍 Детали подключения" 
-                                      FontSize="16" 
-                                      FontWeight="SemiBold" 
-                                      Foreground="{StaticResource TextBrush}"
-                                      Margin="0,0,0,10"
-                                      Style="{StaticResource ClearTextBlock}"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="🎮" 
+                                          FontSize="16" 
+                                          FontWeight="Normal" 
+                                          Foreground="{StaticResource TextBrush}"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                                <TextBlock Text=" Статус подключения к матчу" 
+                                          FontSize="16" 
+                                          FontWeight="SemiBold" 
+                                          Foreground="{StaticResource TextBrush}"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                            </StackPanel>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>
@@ -246,43 +312,62 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
                                 
                                 <TextBlock Grid.Row="0" Grid.Column="0" 
-                                          Text="Порт:" 
+                                          Text="Статус:" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
-                                <TextBlock x:Name="PortText" 
+                                <TextBlock x:Name="GameStatusText" 
                                           Grid.Row="0" Grid.Column="1" 
-                                          Text="Не определен" 
-                                          Foreground="{StaticResource TextBrush}"
+                                          Text="Не подключено" 
+                                          Foreground="{StaticResource ErrorBrush}"
                                           FontWeight="SemiBold"
                                           Margin="0,0,0,5"
                                           Style="{StaticResource ClearTextBlock}"/>
                                 
                                 <TextBlock Grid.Row="1" Grid.Column="0" 
-                                          Text="Пинг:" 
+                                          Text="IP:Порт:" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
-                                <TextBlock x:Name="PingText" 
-                                          Grid.Row="1" Grid.Column="1" 
-                                          Text="Не измерен" 
-                                          Foreground="{StaticResource TextBrush}"
-                                          FontWeight="SemiBold"
-                                          Margin="0,0,0,5"
-                                          Style="{StaticResource ClearTextBlock}"/>
+                                <Grid Grid.Row="1" Grid.Column="1" Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock x:Name="GameIpText" 
+                                              Grid.Column="0"
+                                              Text="Не определен" 
+                                              Foreground="{StaticResource TextBrush}"
+                                              FontWeight="SemiBold"
+                                              VerticalAlignment="Center"
+                                              Style="{StaticResource ClearTextBlock}"/>
+                                    <Button x:Name="CopyGameIpButton" 
+                                            Grid.Column="1"
+                                            Content="📋" 
+                                            Width="30" 
+                                            Height="25"
+                                            FontSize="12"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Margin="5,0,0,0"
+                                            Click="CopyGameIpButton_Click"
+                                            ToolTip="Копировать IP:Порт матча"
+                                            Cursor="Hand"
+                                            Visibility="Collapsed"/>
+                                </Grid>
                                 
                                 <TextBlock Grid.Row="2" Grid.Column="0" 
-                                          Text="Регион:" 
+                                          Text="Сервер:" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,5"
                                           Style="{StaticResource ClearTextBlock}"/>
-                                <TextBlock x:Name="RegionText" 
+                                <TextBlock x:Name="GameServerText" 
                                           Grid.Row="2" Grid.Column="1" 
                                           Text="Не определен" 
                                           Foreground="{StaticResource TextBrush}"
@@ -291,18 +376,58 @@
                                           Style="{StaticResource ClearTextBlock}"/>
                                 
                                 <TextBlock Grid.Row="3" Grid.Column="0" 
-                                          Text="Последнее обновление:" 
+                                          Text="Пинг:" 
+                                          Foreground="{StaticResource SubTextBrush}"
+                                          FontWeight="Medium"
+                                          Margin="0,0,10,5"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                                <TextBlock x:Name="GamePingText" 
+                                          Grid.Row="3" Grid.Column="1" 
+                                          Text="Не измерен" 
+                                          Foreground="{StaticResource TextBrush}"
+                                          FontWeight="SemiBold"
+                                          Margin="0,0,0,5"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                                
+                                <TextBlock Grid.Row="4" Grid.Column="0" 
+                                          Text="Регион:" 
                                           Foreground="{StaticResource SubTextBrush}"
                                           FontWeight="Medium"
                                           Margin="0,0,10,0"
                                           Style="{StaticResource ClearTextBlock}"/>
-                                <TextBlock x:Name="LastUpdateText" 
-                                          Grid.Row="3" Grid.Column="1" 
-                                          Text="Никогда" 
+                                <TextBlock x:Name="GameRegionText" 
+                                          Grid.Row="4" Grid.Column="1" 
+                                          Text="Не определен" 
                                           Foreground="{StaticResource TextBrush}"
                                           FontWeight="SemiBold"
                                           Style="{StaticResource ClearTextBlock}"/>
                             </Grid>
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Last Update -->
+                    <Border Background="{StaticResource SecondaryBrush}" 
+                            CornerRadius="8" 
+                            Padding="15" 
+                            Margin="0,0,0,15">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <TextBlock Text="🕒" 
+                                          FontSize="16" 
+                                          FontWeight="Normal" 
+                                          Foreground="{StaticResource TextBrush}"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                                <TextBlock Text=" Последнее обновление" 
+                                          FontSize="16" 
+                                          FontWeight="SemiBold" 
+                                          Foreground="{StaticResource TextBrush}"
+                                          Style="{StaticResource ClearTextBlock}"/>
+                            </StackPanel>
+                            <TextBlock x:Name="LastUpdateText" 
+                                      Text="Инициализация..." 
+                                      Foreground="{StaticResource TextBrush}"
+                                      FontWeight="SemiBold"
+                                      Style="{StaticResource ClearTextBlock}"/>
                         </StackPanel>
                     </Border>
                     
@@ -343,17 +468,22 @@
                 BorderThickness="0,1,0,0"
                 Padding="20,15"
                 Margin="0">
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button x:Name="RefreshButton" 
-                       Content="🔄 Обновить" 
-                       Style="{StaticResource SecondaryButton}"
-                       Margin="0,0,15,0"
-                       Click="RefreshButton_Click"/>
-                <Button x:Name="CloseButton" 
-                       Content="✕ Закрыть" 
-                       Style="{StaticResource ModernButton}"
-                       Click="CloseButton_Click"/>
-            </StackPanel>
+             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                 <Button x:Name="DebugButton" 
+                        Content="🔍 Отладка" 
+                        Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,15,0"
+                        Click="DebugButton_Click"/>
+                 <Button x:Name="RefreshButton" 
+                        Content="🔄 Обновить" 
+                        Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,15,0"
+                        Click="RefreshButton_Click"/>
+                 <Button x:Name="CloseButton" 
+                        Content="✕ Закрыть" 
+                        Style="{StaticResource ModernButton}"
+                        Click="CloseButton_Click"/>
+             </StackPanel>
         </Border>
     </Grid>
 </Window>
