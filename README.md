@@ -143,7 +143,7 @@
 ### Файлы конфигурации
 
 ```
-%APPDATA%\Tigerbyte\MakeYourChoice\settings.json
+%APPDATA%\Wafphlez\PingByDaylight\settings.json
 ```
 
 ### Структура hosts файла
