@@ -584,7 +584,7 @@ namespace AWSServerSelector
                 else
                 {
                     // Fallback: пробуем определить через ip-api.com
-                    Debug.WriteLine($"⚠️ AWS region не найден, пробуем ip-api.com...");
+                    Debug.WriteLine("⚠️ AWS region не найден, пробуем ip-api.com...");
                     var (regionName, countryCode) = await GetRegionViaIpApiAsync(connection.RemoteAddress);
                     
                     if (!string.IsNullOrEmpty(regionName))
@@ -1292,7 +1292,7 @@ namespace AWSServerSelector
                         }
                     }
                     
-                    Debug.WriteLine($"⚠️ AWS hostname найден, но регион не распознан");
+                    Debug.WriteLine("⚠️ AWS hostname найден, но регион не распознан");
                 }
                 else
                 {
@@ -1318,7 +1318,7 @@ namespace AWSServerSelector
                 return; // Таймер не работает
             }
             
-            Debug.WriteLine($"🛑 Остановка DispatcherTimer пинга");
+            Debug.WriteLine("🛑 Остановка DispatcherTimer пинга");
             
             // Останавливаем таймер
             _pingTimer.Stop();
@@ -1334,7 +1334,7 @@ namespace AWSServerSelector
             _currentGameServerIp = null;
             _currentGameServerPort = 0;
             
-            Debug.WriteLine($"✅ DispatcherTimer остановлен");
+            Debug.WriteLine("✅ DispatcherTimer остановлен");
         }
 
         /// <summary>
@@ -1386,7 +1386,7 @@ namespace AWSServerSelector
             {
                 // Если пинг не удалось измерить - оставляем предыдущее значение
                 // Это предотвращает моргание "50ms" -> "Не измерен" -> "50ms"
-                Debug.WriteLine($"   ⚠️ Пинг не удался, оставляем предыдущее значение");
+                Debug.WriteLine("   ⚠️ Пинг не удался, оставляем предыдущее значение");
             }
         }
 

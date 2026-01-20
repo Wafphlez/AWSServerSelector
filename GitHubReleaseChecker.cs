@@ -91,7 +91,7 @@ namespace AWSServerSelector
             if (string.IsNullOrEmpty(latestVersion))
                 return false;
             
-            System.Diagnostics.Debug.WriteLine($"Version Comparison:");
+            System.Diagnostics.Debug.WriteLine("Version Comparison:");
             System.Diagnostics.Debug.WriteLine($"  Current: '{_currentVersion}'");
             System.Diagnostics.Debug.WriteLine($"  Latest: '{latestVersion}'");
             
