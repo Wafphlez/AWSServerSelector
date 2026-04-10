@@ -92,13 +92,13 @@ namespace AWSServerSelector
                         if (!string.IsNullOrWhiteSpace(_viewModel.DownloadUrl))
                         {
                             UpdateInfoPanel.Visibility = Visibility.Visible;
-                            DownloadButton.Visibility = Visibility.Visible;
-                            DownloadButton.Content = LocalizationManager.GetString("DownloadUpdate");
+                            DialogActionBar.SecondaryButtonVisibility = Visibility.Visible;
+                            DialogActionBar.SecondaryButtonText = LocalizationManager.GetString("DownloadUpdate");
                         }
                         else
                         {
                             UpdateInfoPanel.Visibility = Visibility.Collapsed;
-                            DownloadButton.Visibility = Visibility.Collapsed;
+                            DialogActionBar.SecondaryButtonVisibility = Visibility.Collapsed;
                         }
                     });
                 }
@@ -130,8 +130,8 @@ namespace AWSServerSelector
 
             try
             {
-                DownloadButton.IsEnabled = false;
-                DownloadButton.Content = "Скачивание...";
+                DialogActionBar.IsEnabled = false;
+                DialogActionBar.SecondaryButtonText = "Скачивание...";
                 
                 // Открываем ссылку в браузере
                 Process.Start(new ProcessStartInfo
@@ -149,8 +149,8 @@ namespace AWSServerSelector
             }
             finally
             {
-                DownloadButton.IsEnabled = true;
-                DownloadButton.Content = "Скачать обновление";
+                DialogActionBar.IsEnabled = true;
+                DialogActionBar.SecondaryButtonText = "Скачать обновление";
             }
         }
 

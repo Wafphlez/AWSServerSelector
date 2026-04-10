@@ -6,6 +6,11 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="Resources/Styles/GlobalControls.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Buttons.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Cards.xaml" />
+                <ResourceDictionary Source="Resources/Styles/ListView.xaml" />
+                <ResourceDictionary Source="Resources/Styles/ScrollBars.xaml" />
+                <ResourceDictionary Source="Resources/Styles/Dialogs.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
         <!-- Title Bar Button Styles -->

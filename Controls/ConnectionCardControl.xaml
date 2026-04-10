@@ -1,0 +1,43 @@
+<UserControl x:Class="AWSServerSelector.Controls.ConnectionCardControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:AWSServerSelector.Controls"
+             x:Name="Root">
+    <Border Style="{StaticResource UiCardContainer}" Margin="0,0,0,15">
+        <StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                <TextBlock Text="{Binding Icon, ElementName=Root}"
+                          FontSize="16"
+                          Foreground="White"/>
+                <TextBlock Text="{Binding HeaderText, ElementName=Root}"
+                          FontSize="16"
+                          FontWeight="SemiBold"
+                          Foreground="White"/>
+            </StackPanel>
+
+            <controls:StatusValueRowControl LabelText="{Binding StatusLabel, ElementName=Root}"
+                                            ValueText="{Binding StatusText, ElementName=Root}"
+                                            ValueForeground="{Binding StatusForeground, ElementName=Root}"
+                                            RowMargin="0,0,0,5"/>
+            <controls:StatusValueRowControl LabelText="{Binding IpLabel, ElementName=Root}"
+                                            ValueText="{Binding IpText, ElementName=Root}"
+                                            ValueForeground="White"
+                                            ShowCopyButton="{Binding IpCopyButtonVisibility, ElementName=Root}"
+                                            CopyToolTip="{Binding CopyToolTip, ElementName=Root}"
+                                            CopyClicked="IpRow_CopyClicked"
+                                            RowMargin="0,0,0,5"/>
+            <controls:StatusValueRowControl LabelText="{Binding ServerLabel, ElementName=Root}"
+                                            ValueText="{Binding ServerText, ElementName=Root}"
+                                            ValueForeground="White"
+                                            RowMargin="0,0,0,5"/>
+            <controls:StatusValueRowControl LabelText="{Binding PingLabel, ElementName=Root}"
+                                            ValueText="{Binding PingText, ElementName=Root}"
+                                            ValueForeground="{Binding PingForeground, ElementName=Root}"
+                                            RowMargin="0,0,0,5"/>
+            <controls:StatusValueRowControl LabelText="{Binding RegionLabel, ElementName=Root}"
+                                            ValueText="{Binding RegionText, ElementName=Root}"
+                                            ValueForeground="White"
+                                            RowMargin="0"/>
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AWSServerSelector"
+        xmlns:controls="clr-namespace:AWSServerSelector.Controls"
         mc:Ignorable="d"
         Title="{x:Static local:LocalizationManager.AppTitle}" 
         Height="750" Width="500"
@@ -477,7 +478,7 @@
                 <!-- Server List -->
                 <ListView x:Name="ServerListView" 
                          Grid.Row="1" 
-                         Style="{StaticResource ModernListView}"
+                         Style="{StaticResource UiModernListView}"
                          Margin="0"
                          SelectionMode="Multiple"
                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -517,92 +518,16 @@
                                      BorderThickness="0"
                                      Margin="0,2">
                                 <Expander.Header>
-                                    <Border CornerRadius="6" 
-                                           Padding="12,8"
-                                           Margin="0,0,0,4"
-                                           MouseEnter="GroupHeader_MouseEnter"
-                                           MouseLeave="GroupHeader_MouseLeave">
-                                        <Border.Style>
-                                            <Style TargetType="Border">
-                                                <Setter Property="Background" Value="{StaticResource SecondaryBrush}"/>
-                                                <Style.Triggers>
-                                                    <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Background" Value="#3A3A3A"/>
-                                                    </Trigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </Border.Style>
-                                        <Grid>
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="*"/>
-                                            </Grid.ColumnDefinitions>
-                                            <CheckBox Grid.Column="0" 
-                                                     IsChecked="{Binding IsAllSelected}" 
-                                                     Margin="0,0,12,0"
-                                                     VerticalAlignment="Center"
-                                                     Style="{StaticResource ModernCheckBox}"/>
-                                            <TextBlock Grid.Column="1" 
-                                                      Text="{Binding GroupName}" 
-                                                      Foreground="{StaticResource TextBrush}"
-                                                      FontWeight="SemiBold"
-                                                      FontSize="14"
-                                                      VerticalAlignment="Center"
-                                                      Style="{StaticResource ClearTextBlock}"/>
-                                        </Grid>
-                                    </Border>
+                                    <controls:ServerGroupHeaderControl MouseEnter="GroupHeader_MouseEnter"
+                                                                       MouseLeave="GroupHeader_MouseLeave"/>
                                 </Expander.Header>
                                 <Expander.Content>
                                     <ItemsControl ItemsSource="{Binding Servers}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
-                                                <Border x:Name="ServerItemBorder"
-                                                       Background="Transparent" 
-                                                       Cursor="Hand"
-                                                       Margin="15,4"
-                                                       Padding="4,6"
-                                                       CornerRadius="6"
-                                                       PreviewMouseLeftButtonDown="ServerItem_PreviewMouseLeftButtonDown"
-                                                       MouseEnter="ServerItem_MouseEnter"
-                                                       MouseLeave="ServerItem_MouseLeave">
-                                                    <Grid>
-                                                        <Grid.ColumnDefinitions>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                            <ColumnDefinition Width="*"/>
-                                                            <ColumnDefinition Width="Auto"/>
-                                                        </Grid.ColumnDefinitions>
-                                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                                            <CheckBox IsChecked="{Binding IsSelected}" 
-                                                                     Margin="0,0,12,0"
-                                                                     VerticalAlignment="Center"
-                                                                     Style="{StaticResource ModernCheckBox}"
-                                                                     IsHitTestVisible="False"/>
-                                                            <TextBlock Text="{Binding DisplayName}" 
-                                                                      Foreground="{Binding TextColor}"
-                                                                      VerticalAlignment="Center"
-                                                                      FontSize="13"
-                                                                      FontWeight="Medium"
-                                                                      Style="{StaticResource ClearTextBlock}"/>
-                                                        </StackPanel>
-                                                        
-                                                        <Border Grid.Column="1" Background="Transparent"/>
-                                                        
-                                                        <Border Grid.Column="2" 
-                                                                Background="{Binding LatencyColor}" 
-                                                                CornerRadius="8" 
-                                                                Padding="6,3"
-                                                                Margin="5,0,0,0"
-                                                                HorizontalAlignment="Right"
-                                                                VerticalAlignment="Center">
-                                                            <TextBlock Text="{Binding LatencyText}" 
-                                                                      Foreground="White"
-                                                                      FontWeight="SemiBold"
-                                                                      FontSize="11"
-                                                                      HorizontalAlignment="Center"
-                                                                      Style="{StaticResource ClearTextBlock}"/>
-                                                        </Border>
-                                                    </Grid>
-                                                </Border>
+                                                <controls:ServerListItemControl PreviewMouseLeftButtonDown="ServerItem_PreviewMouseLeftButtonDown"
+                                                                                MouseEnter="ServerItem_MouseEnter"
+                                                                                MouseLeave="ServerItem_MouseLeave"/>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>

@@ -1019,34 +1019,34 @@ namespace AWSServerSelector
             {
                 Debug.WriteLine($"   TCP: {tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}, Region={tcpConnection.Region}, Ping={tcpConnection.Ping}ms");
                 
-                LobbyStatusText.Text = LocalizationManager.Connected;
-                LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // Green
-                
-                LobbyIpText.Text = $"{tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}";
-                CopyLobbyIpButton.Visibility = Visibility.Visible;
-                
-                LobbyServerText.Text = tcpConnection.ServerName;
-                LobbyRegionText.Text = tcpConnection.Region;
-                
-                LobbyPingText.Text = tcpConnection.Ping >= 0 
+                _viewModel.LobbyStatusText = LocalizationManager.Connected;
+                _viewModel.LobbyStatusForeground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45));
+
+                _viewModel.LobbyIpText = $"{tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}";
+                _viewModel.LobbyCopyVisibility = Visibility.Visible;
+
+                _viewModel.LobbyServerText = tcpConnection.ServerName;
+                _viewModel.LobbyRegionText = tcpConnection.Region;
+
+                _viewModel.LobbyPingText = tcpConnection.Ping >= 0
                     ? $"{tcpConnection.Ping} ms" 
                     : LocalizationManager.NotMeasured;
-                LobbyPingText.Foreground = GetPingColor(tcpConnection.Ping);
+                _viewModel.LobbyPingForeground = GetPingColor(tcpConnection.Ping);
                 
                 Debug.WriteLine($"   ✅ UI лобби обновлен");
             }
             else
             {
-                LobbyStatusText.Text = LocalizationManager.NotConnected;
-                LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
-                
-                LobbyIpText.Text = LocalizationManager.NotDetermined;
-                CopyLobbyIpButton.Visibility = Visibility.Collapsed;
-                
-                LobbyServerText.Text = LocalizationManager.NotDetermined;
-                LobbyRegionText.Text = LocalizationManager.NotDetermined;
-                LobbyPingText.Text = LocalizationManager.NotMeasured;
-                LobbyPingText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
+                _viewModel.LobbyStatusText = LocalizationManager.NotConnected;
+                _viewModel.LobbyStatusForeground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C));
+
+                _viewModel.LobbyIpText = LocalizationManager.NotDetermined;
+                _viewModel.LobbyCopyVisibility = Visibility.Collapsed;
+
+                _viewModel.LobbyServerText = LocalizationManager.NotDetermined;
+                _viewModel.LobbyRegionText = LocalizationManager.NotDetermined;
+                _viewModel.LobbyPingText = LocalizationManager.NotMeasured;
+                _viewModel.LobbyPingForeground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
                 
                 Debug.WriteLine($"   ⚠️ TCP отсутствует, показываем 'Не подключено'");
                 
@@ -1058,14 +1058,14 @@ namespace AWSServerSelector
             // Обновляем UDP (игра)
             if (udpConnection != null)
             {
-                GameStatusText.Text = LocalizationManager.Connected;
-                GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45)); // Green
-                
-                GameIpText.Text = $"{udpConnection.RemoteAddress}:{udpConnection.RemotePort}";
-                CopyGameIpButton.Visibility = Visibility.Visible;
-                
-                GameServerText.Text = udpConnection.ServerName;
-                GameRegionText.Text = udpConnection.Region;
+                _viewModel.GameStatusText = LocalizationManager.Connected;
+                _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45));
+
+                _viewModel.GameIpText = $"{udpConnection.RemoteAddress}:{udpConnection.RemotePort}";
+                _viewModel.GameCopyVisibility = Visibility.Visible;
+
+                _viewModel.GameServerText = udpConnection.ServerName;
+                _viewModel.GameRegionText = udpConnection.Region;
                 
                 // Проверяем, изменился ли IP адрес игрового сервера
                 // Сравниваем с последним сохраненным IP игры (не с GameLift хостом!)
@@ -1087,13 +1087,13 @@ namespace AWSServerSelector
                     // Показываем начальное значение пинга или "Измеряется..."
                     if (udpConnection.Ping >= 0)
                     {
-                        GamePingText.Text = $"{udpConnection.Ping} ms";
-                        GamePingText.Foreground = GetPingColor(udpConnection.Ping);
+                        _viewModel.GamePingText = $"{udpConnection.Ping} ms";
+                        _viewModel.GamePingForeground = GetPingColor(udpConnection.Ping);
                     }
                     else
                     {
-                        GamePingText.Text = LocalizationManager.Measuring;
-                        GamePingText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Yellow
+                        _viewModel.GamePingText = LocalizationManager.Measuring;
+                        _viewModel.GamePingForeground = new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07));
                     }
                     
                     // Запускаем DispatcherTimer для мониторинга пинга (остановит старый если был)
@@ -1111,16 +1111,16 @@ namespace AWSServerSelector
                 // Нет UDP соединения - сбрасываем статус игры
                 Debug.WriteLine("⚠️ UDP соединение не найдено - сбрасываем статус игры");
                 
-                GameStatusText.Text = LocalizationManager.NotConnected;
-                GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
-                
-                GameIpText.Text = LocalizationManager.NotDetermined;
-                CopyGameIpButton.Visibility = Visibility.Collapsed;
-                
-                GameServerText.Text = LocalizationManager.NotDetermined;
-                GameRegionText.Text = LocalizationManager.NotDetermined;
-                GamePingText.Text = LocalizationManager.NotMeasured;
-                GamePingText.Foreground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
+                _viewModel.GameStatusText = LocalizationManager.NotConnected;
+                _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C));
+
+                _viewModel.GameIpText = LocalizationManager.NotDetermined;
+                _viewModel.GameCopyVisibility = Visibility.Collapsed;
+
+                _viewModel.GameServerText = LocalizationManager.NotDetermined;
+                _viewModel.GameRegionText = LocalizationManager.NotDetermined;
+                _viewModel.GamePingText = LocalizationManager.NotMeasured;
+                _viewModel.GamePingForeground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
                 
                 // Сбрасываем сохраненный IP игры
                 _lastGameIp = null;
@@ -1136,21 +1136,23 @@ namespace AWSServerSelector
         private void UpdateNoConnection()
         {
             var snapshot = _connectionMonitorService.GetCurrentSnapshotAsync().GetAwaiter().GetResult();
-            LobbyStatusText.Text = LocalizationManager.GameNotRunning;
-            LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)); // Gray
-            LobbyIpText.Text = snapshot.Lobby.IpText;
-            CopyLobbyIpButton.Visibility = Visibility.Collapsed;
-            LobbyServerText.Text = snapshot.Lobby.ServerText;
-            LobbyRegionText.Text = snapshot.Lobby.RegionText;
-            LobbyPingText.Text = snapshot.Lobby.PingText;
+            _viewModel.LobbyStatusText = LocalizationManager.GameNotRunning;
+            _viewModel.LobbyStatusForeground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
+            _viewModel.LobbyIpText = snapshot.Lobby.IpText;
+            _viewModel.LobbyCopyVisibility = Visibility.Collapsed;
+            _viewModel.LobbyServerText = snapshot.Lobby.ServerText;
+            _viewModel.LobbyRegionText = snapshot.Lobby.RegionText;
+            _viewModel.LobbyPingText = snapshot.Lobby.PingText;
+            _viewModel.LobbyPingForeground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
 
-            GameStatusText.Text = LocalizationManager.GameNotRunning;
-            GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)); // Gray
-            GameIpText.Text = snapshot.Game.IpText;
-            CopyGameIpButton.Visibility = Visibility.Collapsed;
-            GameServerText.Text = snapshot.Game.ServerText;
-            GameRegionText.Text = snapshot.Game.RegionText;
-            GamePingText.Text = snapshot.Game.PingText;
+            _viewModel.GameStatusText = LocalizationManager.GameNotRunning;
+            _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
+            _viewModel.GameIpText = snapshot.Game.IpText;
+            _viewModel.GameCopyVisibility = Visibility.Collapsed;
+            _viewModel.GameServerText = snapshot.Game.ServerText;
+            _viewModel.GameRegionText = snapshot.Game.RegionText;
+            _viewModel.GamePingText = snapshot.Game.PingText;
+            _viewModel.GamePingForeground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
             
             // Сбрасываем сохраненные IP
             _lastLobbyIp = null;
@@ -1170,7 +1172,7 @@ namespace AWSServerSelector
         {
             var text = $"{DateTime.Now:dd.MM.yyyy HH:mm:ss}";
             _viewModel.LastUpdateText = text;
-            LastUpdateText.Text = text;
+            _viewModel.LastUpdateForeground = new SolidColorBrush(Colors.White);
         }
 
         private SolidColorBrush GetPingColor(long ping)
@@ -1390,8 +1392,8 @@ namespace AWSServerSelector
             // ВАЖНО: обновляем только при успешном пинге, чтобы избежать моргания при временных неудачах
             if (ping >= 0)
             {
-                GamePingText.Text = $"{ping} ms";
-                GamePingText.Foreground = GetPingColor(ping);
+                _viewModel.GamePingText = $"{ping} ms";
+                _viewModel.GamePingForeground = GetPingColor(ping);
                 Debug.WriteLine($"   ✅ UI обновлен: {ping}ms");
             }
             else
@@ -1441,14 +1443,14 @@ namespace AWSServerSelector
             // Можно добавить всплывающее уведомление, пока просто меняем текст временно
             var originalText = _viewModel.LastUpdateText;
             _viewModel.LastUpdateText = message;
-            LastUpdateText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45));
+            _viewModel.LastUpdateForeground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45));
             
             Task.Delay(2000).ContinueWith(_ => 
             {
                 Dispatcher.Invoke(() => 
                 {
                     _viewModel.LastUpdateText = originalText;
-                    LastUpdateText.Foreground = new SolidColorBrush(Colors.White);
+                    _viewModel.LastUpdateForeground = new SolidColorBrush(Colors.White);
                 });
             });
         }

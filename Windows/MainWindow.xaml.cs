@@ -1660,7 +1660,14 @@ namespace AWSServerSelector
         
         private void ServerItem_MouseEnter(object sender, MouseEventArgs e)
         {
-            if (sender is Border border)
+            var border = sender as Border;
+            if (border == null && sender is FrameworkElement element)
+            {
+                border = FindVisualChildren<Border>(element)
+                    .FirstOrDefault(b => b.Cursor == Cursors.Hand);
+            }
+
+            if (border != null)
             {
                 border.Background = new SolidColorBrush(Color.FromRgb(0x2A, 0x2A, 0x2A));
             }
@@ -1668,7 +1675,14 @@ namespace AWSServerSelector
         
         private void ServerItem_MouseLeave(object sender, MouseEventArgs e)
         {
-            if (sender is Border border && border.DataContext is ServerItem serverItem)
+            var border = sender as Border;
+            if (border == null && sender is FrameworkElement element)
+            {
+                border = FindVisualChildren<Border>(element)
+                    .FirstOrDefault(b => b.Cursor == Cursors.Hand);
+            }
+
+            if (border != null && border.DataContext is ServerItem serverItem)
             {
                 // Проверяем, не hovering ли группа
                 if (serverItem.ParentGroup?.IsGroupHovered == true)

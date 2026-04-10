@@ -1,9 +1,20 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using System.Windows;
+using System.Windows.Media;
 
 namespace AWSServerSelector.ViewModels;
 
 public partial class ConnectionInfoViewModel : ObservableObject
 {
+    [ObservableProperty]
+    private Brush lobbyStatusForeground = Brushes.White;
+
+    [ObservableProperty]
+    private Brush lobbyPingForeground = Brushes.White;
+
+    [ObservableProperty]
+    private Visibility lobbyCopyVisibility = Visibility.Collapsed;
+
     [ObservableProperty]
     private string lobbyStatusText = string.Empty;
 
@@ -23,6 +34,15 @@ public partial class ConnectionInfoViewModel : ObservableObject
     private string gameStatusText = string.Empty;
 
     [ObservableProperty]
+    private Brush gameStatusForeground = Brushes.White;
+
+    [ObservableProperty]
+    private Brush gamePingForeground = Brushes.White;
+
+    [ObservableProperty]
+    private Visibility gameCopyVisibility = Visibility.Collapsed;
+
+    [ObservableProperty]
     private string gameIpText = string.Empty;
 
     [ObservableProperty]
@@ -36,4 +56,7 @@ public partial class ConnectionInfoViewModel : ObservableObject
 
     [ObservableProperty]
     private string lastUpdateText = string.Empty;
+
+    [ObservableProperty]
+    private Brush lastUpdateForeground = Brushes.White;
 }

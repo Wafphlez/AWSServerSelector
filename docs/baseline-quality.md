@@ -3,11 +3,13 @@
 ## Команды
 - `dotnet restore`
 - `dotnet build AWSServerSelector.sln`
+- `dotnet test AWSServerSelector.sln`
 
 ## Текущее состояние
-- Сборка: успешна.
+- Сборка: успешна (`OutDir=artifacts/build`, чтобы обойти lock запущенного exe).
 - Ошибки: отсутствуют.
-- Предупреждения: есть nullable-предупреждения в `Windows/MainWindow.xaml.cs`.
+- Тесты: 11/11 успешны.
+- Предупреждения: отсутствуют в текущем baseline-проходе.
 
 ## Цель для рефакторинга
 - На каждом этапе не допускать новых ошибок сборки.

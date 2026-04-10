@@ -1,0 +1,40 @@
+<UserControl x:Class="AWSServerSelector.Controls.StatusValueRowControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Name="Root">
+    <Grid Margin="{Binding RowMargin, ElementName=Root}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Column="0"
+                   Text="{Binding LabelText, ElementName=Root}"
+                   Foreground="#FFB0B0B0"
+                   FontWeight="Medium"
+                   Margin="0,0,10,0"/>
+
+        <Grid Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0"
+                       Text="{Binding ValueText, ElementName=Root}"
+                       Foreground="{Binding ValueForeground, ElementName=Root}"
+                       FontWeight="SemiBold"
+                       VerticalAlignment="Center"/>
+
+            <Button Grid.Column="1"
+                    Content="📋"
+                    Width="24"
+                    Height="22"
+                    Margin="8,0,0,0"
+                    ToolTip="{Binding CopyToolTip, ElementName=Root}"
+                    Style="{StaticResource UiCopyButton}"
+                    Visibility="{Binding ShowCopyButton, ElementName=Root}"
+                    Click="CopyButton_Click"/>
+        </Grid>
+    </Grid>
+</UserControl>

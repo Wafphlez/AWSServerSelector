@@ -1,6 +1,7 @@
 <Window x:Class="AWSServerSelector.AboutDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:AWSServerSelector.Controls"
         Title="{Binding Title}" 
         Width="520" 
         Height="280"
@@ -17,38 +18,6 @@
         SnapsToDevicePixels="True"
         UseLayoutRounding="True">
     
-    <Window.Resources>
-        <!-- Modern Button Style -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="#DC143C"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="6"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#ed365b"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#b8112e"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
-
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
@@ -80,19 +49,12 @@
                        TextWrapping="Wrap"/>
         </StackPanel>
         
-        <!-- Button Panel -->
-        <Border Grid.Row="1" 
-               Background="#1A1A1A" 
-               BorderBrush="#404040" 
-               BorderThickness="0,1,0,0" 
-               Padding="25,20">
-            <Button Content="{Binding AwesomeText}"
-                    Width="100"
-                    Height="30"
-                    HorizontalAlignment="Right"
-                    Style="{StaticResource ModernButton}"
-                    Click="OkButton_Click"/>
-        </Border>
+        <controls:DialogActionBarControl Grid.Row="1"
+                                         PrimaryButtonText="{Binding AwesomeText}"
+                                         PrimaryButtonWidth="100"
+                                         ButtonHeight="30"
+                                         SecondaryButtonVisibility="Collapsed"
+                                         PrimaryClick="OkButton_Click"/>
     </Grid>
 </Window>
 

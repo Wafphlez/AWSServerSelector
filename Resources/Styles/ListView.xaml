@@ -1,0 +1,53 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style x:Key="ModernCheckBox" TargetType="CheckBox">
+        <Setter Property="Foreground" Value="#FFDC143C"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid>
+                        <Border x:Name="Border"
+                                Background="#FF2A2A2A"
+                                BorderBrush="#FFDC143C"
+                                BorderThickness="2"
+                                CornerRadius="4"
+                                Width="18"
+                                Height="18"/>
+                        <Path x:Name="CheckMark"
+                              Data="M 2,6 L 6,10 L 14,2"
+                              Stroke="#FFDC143C"
+                              StrokeThickness="2"
+                              Visibility="Collapsed"/>
+                        <Rectangle x:Name="IndeterminateMark"
+                                   Fill="#FFDC143C"
+                                   Width="10"
+                                   Height="10"
+                                   RadiusX="2"
+                                   RadiusY="2"
+                                   Visibility="Collapsed"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="Border" Property="Background" Value="#FFDC143C"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="{x:Null}">
+                            <Setter TargetName="IndeterminateMark" Property="Visibility" Value="Visible"/>
+                            <Setter TargetName="Border" Property="Background" Value="#FF2A2A2A"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Border" Property="BorderBrush" Value="#FFed365b"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="UiModernListView" TargetType="ListView">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="SelectionMode" Value="Multiple"/>
+    </Style>
+</ResourceDictionary>
