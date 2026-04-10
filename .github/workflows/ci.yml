@@ -22,7 +22,7 @@ jobs:
         run: dotnet restore AWSServerSelector.sln
 
       - name: Build
-        run: dotnet build AWSServerSelector.sln --configuration Release --no-restore
+        run: dotnet build AWSServerSelector.sln --configuration Release --no-restore -warnaserror
 
       - name: Test
-        run: dotnet test AWSServerSelector.sln --configuration Release --no-build
+        run: dotnet test AWSServerSelector.sln --configuration Release --no-build --collect:"XPlat Code Coverage"

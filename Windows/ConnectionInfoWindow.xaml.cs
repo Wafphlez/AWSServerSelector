@@ -25,6 +25,8 @@ namespace AWSServerSelector
     {
         private readonly ConnectionInfoViewModel _viewModel = new();
         private readonly IConnectionMonitorService _connectionMonitorService;
+        private readonly IMessageService _messageService;
+        private readonly IClipboardService _clipboardService;
         #region Fields
 
         private DispatcherTimer? _monitoringTimer;
@@ -52,9 +54,14 @@ namespace AWSServerSelector
 
         #region Constructor
 
-        public ConnectionInfoWindow(IConnectionMonitorService connectionMonitorService)
+        public ConnectionInfoWindow(
+            IConnectionMonitorService connectionMonitorService,
+            IMessageService messageService,
+            IClipboardService clipboardService)
         {
             _connectionMonitorService = connectionMonitorService;
+            _messageService = messageService;
+            _clipboardService = clipboardService;
             InitializeComponent();
             DataContext = _viewModel;
             _viewModel.LastUpdateText = LocalizationManager.Initializing;
@@ -169,7 +176,7 @@ namespace AWSServerSelector
                     // Показываем сообщение пользователю
                     Dispatcher.Invoke(() =>
                     {
-                        MessageBox.Show(
+                        _messageService.Show(
                             "UDP мониторинг недоступен.\n\n" +
                             "Будет работать только отображение TCP соединений (лобби).\n\n" +
                             "Для мониторинга UDP (матча) убедитесь что:\n" +
@@ -1423,7 +1430,7 @@ namespace AWSServerSelector
             if (_currentLobbyConnection != null)
             {
                 var text = $"{_currentLobbyConnection.RemoteAddress}:{_currentLobbyConnection.RemotePort}";
-                Clipboard.SetText(text);
+                _clipboardService.SetText(text);
                 ShowCopyNotification(LocalizationManager.LobbyCopied);
             }
         }
@@ -1433,7 +1440,7 @@ namespace AWSServerSelector
             if (_currentGameConnection != null)
             {
                 var text = $"{_currentGameConnection.RemoteAddress}:{_currentGameConnection.RemotePort}";
-                Clipboard.SetText(text);
+                _clipboardService.SetText(text);
                 ShowCopyNotification(LocalizationManager.MatchCopied);
             }
         }

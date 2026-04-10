@@ -1,83 +1,28 @@
 using System;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
+using AWSServerSelector.Services.Interfaces;
 using AWSServerSelector.ViewModels;
 
-namespace AWSServerSelector
+namespace AWSServerSelector;
+
+public partial class UpdateDialog : Window
 {
-    public partial class UpdateDialog : Window, INotifyPropertyChanged
+    private readonly UpdateDialogViewModel _viewModel;
+    private readonly IMessageService _messageService;
+    private readonly IExternalNavigationService _externalNavigationService;
+
+    public UpdateDialog(
+        UpdateDialogViewModel viewModel,
+        IMessageService messageService,
+        IExternalNavigationService externalNavigationService)
     {
-        private readonly UpdateDialogViewModel _viewModel;
-
-        public string StatusText 
-        { 
-            get => _viewModel.StatusText;
-            set 
-            { 
-                _viewModel.StatusText = value;
-                OnPropertyChanged(nameof(StatusText)); 
-            } 
-        }
-
-        public string UpdateTitle 
-        { 
-            get => _viewModel.UpdateTitle;
-            set 
-            { 
-                _viewModel.UpdateTitle = value;
-                OnPropertyChanged(nameof(UpdateTitle)); 
-            } 
-        }
-
-        public string UpdateDescription 
-        { 
-            get => _viewModel.UpdateDescription;
-            set 
-            { 
-                _viewModel.UpdateDescription = value;
-                OnPropertyChanged(nameof(UpdateDescription)); 
-            } 
-        }
-
-        public string UpdateSize 
-        { 
-            get => _viewModel.UpdateSize;
-            set 
-            { 
-                _viewModel.UpdateSize = value;
-                OnPropertyChanged(nameof(UpdateSize)); 
-            } 
-        }
-
-        public string YourVersionText 
-        { 
-            get => _viewModel.YourVersionText;
-            set 
-            { 
-                _viewModel.YourVersionText = value;
-                OnPropertyChanged(nameof(YourVersionText)); 
-            } 
-        }
-
-        public string LatestVersionText 
-        { 
-            get => _viewModel.LatestVersionText;
-            set 
-            { 
-                _viewModel.LatestVersionText = value;
-                OnPropertyChanged(nameof(LatestVersionText)); 
-            } 
-        }
-
-        public UpdateDialog(UpdateDialogViewModel viewModel)
-        {
-            _viewModel = viewModel;
-            InitializeComponent();
-            DataContext = this;
-            _viewModel.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName ?? string.Empty);
-        }
+        _viewModel = viewModel;
+        _messageService = messageService;
+        _externalNavigationService = externalNavigationService;
+        InitializeComponent();
+        DataContext = _viewModel;
+    }
 
         public void StartUpdateCheck(string currentVersion)
         {
@@ -107,11 +52,11 @@ namespace AWSServerSelector
                     await Dispatcher.InvokeAsync(() =>
                     {
                         var errorText = LocalizationManager.GetString("UpdateCheckError") ?? "Error checking for updates:";
-                        StatusText = $"{LocalizationManager.GetString("UpdateCheckError")} {ex.Message}";
+                        _viewModel.StatusText = $"{errorText} {ex.Message}";
                     });
                 }
             });
-        }
+    }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
@@ -121,43 +66,28 @@ namespace AWSServerSelector
 
         private async void DownloadButton_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(_viewModel.DownloadUrl))
-            {
-                MessageBox.Show("Ссылка для скачивания недоступна.", "Ошибка", 
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            try
-            {
-                DialogActionBar.IsEnabled = false;
-                DialogActionBar.SecondaryButtonText = "Скачивание...";
-                
-                // Открываем ссылку в браузере
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = _viewModel.DownloadUrl,
-                    UseShellExecute = true
-                });
-
-                StatusText = "Ссылка для скачивания открыта в браузере.";
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка при открытии ссылки: {ex.Message}", "Ошибка", 
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                DialogActionBar.IsEnabled = true;
-                DialogActionBar.SecondaryButtonText = "Скачать обновление";
-            }
+        if (string.IsNullOrEmpty(_viewModel.DownloadUrl))
+        {
+            _messageService.Show("Ссылка для скачивания недоступна.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
         }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected virtual void OnPropertyChanged(string propertyName)
+        try
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            DialogActionBar.IsEnabled = false;
+            DialogActionBar.SecondaryButtonText = "Скачивание...";
+            _externalNavigationService.OpenUrl(_viewModel.DownloadUrl);
+
+            _viewModel.StatusText = "Ссылка для скачивания открыта в браузере.";
+        }
+        catch (Exception ex)
+        {
+            _messageService.Show($"Ошибка при открытии ссылки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            DialogActionBar.IsEnabled = true;
+            DialogActionBar.SecondaryButtonText = "Скачать обновление";
         }
     }
 }

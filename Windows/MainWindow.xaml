@@ -389,30 +389,30 @@
         
         <!-- Menu Bar -->
         <Menu Grid.Row="0" 
-              Background="{StaticResource PrimaryBrush}" 
-              Foreground="{StaticResource TextBrush}"
-              BorderBrush="{StaticResource BorderBrush}"
+              Background="{StaticResource UiPrimaryBrush}" 
+              Foreground="{StaticResource UiTextBrush}"
+              BorderBrush="{StaticResource UiBorderBrush}"
               BorderThickness="0,0,0,1">
             <MenuItem x:Name="SettingsMenuItem" Header="{x:Static local:LocalizationManager.Settings}"
-                      Click="Settings_Click"
-                      Background="{StaticResource PrimaryBrush}"
-                      Foreground="{StaticResource TextBrush}"/>
+                      Command="{Binding OpenSettingsCommand}"
+                      Background="{StaticResource UiPrimaryBrush}"
+                      Foreground="{StaticResource UiTextBrush}"/>
             <MenuItem x:Name="AboutMenuItem" Header="{x:Static local:LocalizationManager.About}"
-                      Click="About_Click"
-                      Background="{StaticResource PrimaryBrush}"
-                      Foreground="{StaticResource TextBrush}"/>
+                      Command="{Binding OpenAboutCommand}"
+                      Background="{StaticResource UiPrimaryBrush}"
+                      Foreground="{StaticResource UiTextBrush}"/>
             <MenuItem x:Name="CheckUpdatesMenuItem" Header="{x:Static local:LocalizationManager.CheckUpdates}"
-                      Click="CheckUpdates_Click"
-                      Background="{StaticResource PrimaryBrush}"
-                      Foreground="{StaticResource TextBrush}"/>
+                      Command="{Binding CheckUpdatesCommand}"
+                      Background="{StaticResource UiPrimaryBrush}"
+                      Foreground="{StaticResource UiTextBrush}"/>
             <MenuItem x:Name="OpenHostsMenuItem" Header="{x:Static local:LocalizationManager.OpenHosts}"
-                      Click="OpenHostsButton_Click"
-                      Background="{StaticResource PrimaryBrush}"
-                      Foreground="{StaticResource TextBrush}"/>
+                      Command="{Binding OpenHostsCommand}"
+                      Background="{StaticResource UiPrimaryBrush}"
+                      Foreground="{StaticResource UiTextBrush}"/>
             <MenuItem x:Name="ConnectionInfoMenuItem" Header="{x:Static local:LocalizationManager.ConnectionInfo}"
-                      Click="ConnectionInfo_Click"
-                      Background="{StaticResource PrimaryBrush}"
-                      Foreground="{StaticResource TextBrush}"/>
+                      Command="{Binding OpenConnectionInfoCommand}"
+                      Background="{StaticResource UiPrimaryBrush}"
+                      Foreground="{StaticResource UiTextBrush}"/>
         </Menu>
         
         <!-- Header -->
@@ -436,8 +436,8 @@
         
         <!-- Server List -->
         <Border Grid.Row="2" 
-                Background="{StaticResource CardBrush}" 
-                BorderBrush="{StaticResource BorderBrush}" 
+                Background="{StaticResource UiCardBrush}" 
+                BorderBrush="{StaticResource UiBorderBrush}" 
                 BorderThickness="1" 
                 Margin="15"
                 CornerRadius="12">
@@ -451,7 +451,7 @@
                 </Grid.RowDefinitions>
                 
                 <!-- List Header -->
-                <Border x:Name="ServerListHeader" Grid.Row="0" Background="{StaticResource SecondaryBrush}" Padding="15,12" CornerRadius="12,12,0,0">
+                <Border x:Name="ServerListHeader" Grid.Row="0" Background="{StaticResource UiSecondaryBrush}" Padding="15,12" CornerRadius="12,12,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -460,13 +460,13 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock x:Name="SelectServersText" Grid.Column="0" 
                                   Text="{x:Static local:LocalizationManager.SelectServers}" 
-                                  Foreground="{StaticResource TextBrush}" 
+                                  Foreground="{StaticResource UiTextBrush}" 
                                   FontWeight="SemiBold"
                                   FontSize="16"
                                   Style="{StaticResource ClearTextBlock}"/>
                         <TextBlock x:Name="LatencyText" Grid.Column="2" 
                                   Text="{x:Static local:LocalizationManager.Latency}" 
-                                  Foreground="{StaticResource TextBrush}" 
+                                  Foreground="{StaticResource UiTextBrush}" 
                                   FontWeight="SemiBold"
                                   FontSize="16"
                                   HorizontalAlignment="Center"
@@ -541,7 +541,7 @@
         
         <!-- Status Bar -->
         <Border Grid.Row="3" 
-                Background="{StaticResource SecondaryBrush}" 
+                Background="{StaticResource UiSecondaryBrush}" 
                 Padding="20,12"
                 Margin="15,0,15,15"
                 CornerRadius="8">
@@ -552,7 +552,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0"
                           Text="💡 " 
-                          Foreground="{StaticResource AccentBrush}" 
+                          Foreground="#FFDC143C" 
                           FontSize="14"
                           VerticalAlignment="Top"
                           Margin="0,0,8,0"
@@ -560,7 +560,7 @@
                 <TextBlock Grid.Column="1"
                           x:Name="StatusText" 
                           Text="{x:Static local:LocalizationManager.StatusText}" 
-                          Foreground="{StaticResource SubTextBrush}" 
+                          Foreground="{StaticResource UiSubTextBrush}" 
                           FontSize="13"
                           TextWrapping="Wrap"
                           VerticalAlignment="Top"
@@ -581,13 +581,13 @@
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="RevertButton" 
                        Content="{x:Static local:LocalizationManager.ResetToDefault}" 
-                       Style="{StaticResource SecondaryButton}"
+                       Style="{StaticResource UiSecondaryButton}"
                        Margin="0,0,15,0"
-                       Click="RevertButton_Click"/>
+                       Command="{Binding RevertSelectionCommand}"/>
                 <Button x:Name="ApplyButton" 
                        Content="{x:Static local:LocalizationManager.ApplySelection}" 
-                       Style="{StaticResource ModernButton}"
-                       Click="ApplyButton_Click"/>
+                       Style="{StaticResource UiModernButton}"
+                       Command="{Binding ApplySelectionCommand}"/>
             </StackPanel>
         </Border>
     </Grid>

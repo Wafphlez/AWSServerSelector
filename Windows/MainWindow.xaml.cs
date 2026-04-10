@@ -38,37 +38,7 @@ namespace AWSServerSelector
         private static readonly string CurrentVersion =
             typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "1.0.3";
         
-        // Holds endpoint list and stability flag for each region
-        private record RegionInfo(string[] Hosts, bool Stable);
-        private readonly Dictionary<string, RegionInfo> _regions = new()
-        {
-            // Europe
-            { "Europe (London)",            new RegionInfo(new[]{ "gamelift.eu-west-2.amazonaws.com",    "gamelift-ping.eu-west-2.api.aws" }, false) },
-            { "Europe (Ireland)",           new RegionInfo(new[]{ "gamelift.eu-west-1.amazonaws.com",    "gamelift-ping.eu-west-1.api.aws" }, true) },
-            { "Europe (Frankfurt am Main)", new RegionInfo(new[]{ "gamelift.eu-central-1.amazonaws.com", "gamelift-ping.eu-central-1.api.aws" }, true) },
-
-            // The Americas
-            { "US East (N. Virginia)",      new RegionInfo(new[]{ "gamelift.us-east-1.amazonaws.com",    "gamelift-ping.us-east-1.api.aws" }, true) },
-            { "US East (Ohio)",             new RegionInfo(new[]{ "gamelift.us-east-2.amazonaws.com",    "gamelift-ping.us-east-2.api.aws" }, false) },
-            { "US West (N. California)",    new RegionInfo(new[]{ "gamelift.us-west-1.amazonaws.com",    "gamelift-ping.us-west-1.api.aws" }, true) },
-            { "US West (Oregon)",           new RegionInfo(new[]{ "gamelift.us-west-2.amazonaws.com",    "gamelift-ping.us-west-2.api.aws" }, true) },
-            { "Canada (Central)",           new RegionInfo(new[]{ "gamelift.ca-central-1.amazonaws.com", "gamelift-ping.ca-central-1.api.aws" }, false) },
-            { "South America (São Paulo)",  new RegionInfo(new[]{ "gamelift.sa-east-1.amazonaws.com",   "gamelift-ping.sa-east-1.api.aws" }, true) },
-
-            // Asia (excluding Mainland China)
-            { "Asia Pacific (Tokyo)",       new RegionInfo(new[]{ "gamelift.ap-northeast-1.amazonaws.com","gamelift-ping.ap-northeast-1.api.aws" }, true) },
-            { "Asia Pacific (Seoul)",       new RegionInfo(new[]{ "gamelift.ap-northeast-2.amazonaws.com","gamelift-ping.ap-northeast-2.api.aws" }, true) },
-            { "Asia Pacific (Mumbai)",      new RegionInfo(new[]{ "gamelift.ap-south-1.amazonaws.com",   "gamelift-ping.ap-south-1.api.aws" }, true) },
-            { "Asia Pacific (Singapore)",   new RegionInfo(new[]{ "gamelift.ap-southeast-1.amazonaws.com","gamelift-ping.ap-southeast-1.api.aws" }, true) },
-            { "Asia Pacific (Hong Kong)",   new RegionInfo(new[]{ "ec2.ap-east-1.amazonaws.com","gamelift-ping.ap-east-1.api.aws" }, true) },
-
-            // Oceania
-            { "Asia Pacific (Sydney)",      new RegionInfo(new[]{ "gamelift.ap-southeast-2.amazonaws.com","gamelift-ping.ap-southeast-2.api.aws" }, true) },
-
-            // Mainland China
-            { "China (Beijing)",            new RegionInfo(new[]{ "gamelift.cn-north-1.amazonaws.com.cn" }, true) },
-            { "China (Ningxia)",            new RegionInfo(new[]{ "gamelift.cn-northwest-1.amazonaws.com.cn" }, true) },
-        };
+        private readonly IReadOnlyDictionary<string, RegionDefinition> _regions;
 
         private DispatcherTimer? _pingTimer;
         private ConnectionInfoWindow? _connectionInfoWindow;
@@ -77,6 +47,9 @@ namespace AWSServerSelector
         private readonly IHostsService _hostsService;
         private readonly ILatencyService _latencyService;
         private readonly IDialogService _dialogService;
+        private readonly IRegionCatalogService _regionCatalogService;
+        private readonly IMessageService _messageService;
+        private readonly IExternalNavigationService _externalNavigationService;
         
         private ApplyMode _applyMode = ApplyMode.Gatekeep;
         private BlockMode _blockMode = BlockMode.Both;
@@ -101,14 +74,30 @@ namespace AWSServerSelector
             ISettingsService settingsService,
             IHostsService hostsService,
             ILatencyService latencyService,
-            IDialogService dialogService)
+            IDialogService dialogService,
+            IRegionCatalogService regionCatalogService,
+            IMessageService messageService,
+            IExternalNavigationService externalNavigationService)
         {
             _settingsService = settingsService;
             _hostsService = hostsService;
             _latencyService = latencyService;
             _dialogService = dialogService;
+            _regionCatalogService = regionCatalogService;
+            _messageService = messageService;
+            _externalNavigationService = externalNavigationService;
+            _regions = _regionCatalogService.Regions;
 
-            ViewModel = new MainWindowViewModel(ServerItems, ServerGroups);
+            ViewModel = new MainWindowViewModel(
+                ServerItems,
+                ServerGroups,
+                () => ApplyButton_Click(this, new RoutedEventArgs()),
+                () => RevertButton_Click(this, new RoutedEventArgs()),
+                () => Settings_Click(this, new RoutedEventArgs()),
+                () => About_Click(this, new RoutedEventArgs()),
+                () => CheckUpdates_Click(this, new RoutedEventArgs()),
+                () => OpenHostsButton_Click(this, new RoutedEventArgs()),
+                () => ConnectionInfo_Click(this, new RoutedEventArgs()));
             InitializeComponent();
             DataContext = ViewModel;
             LoadSettings();
@@ -217,6 +206,10 @@ namespace AWSServerSelector
                 _blockMode = settings.BlockMode;
                 _mergeUnstable = settings.MergeUnstable;
                 _currentLanguage = string.IsNullOrWhiteSpace(settings.Language) ? "en" : settings.Language;
+                ViewModel.ApplyMode = _applyMode;
+                ViewModel.BlockMode = _blockMode;
+                ViewModel.MergeUnstable = _mergeUnstable;
+                ViewModel.Language = _currentLanguage;
                 LocalizationManager.SetLanguage(_currentLanguage);
 
                 System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
@@ -246,6 +239,10 @@ namespace AWSServerSelector
                     Language = _currentLanguage,
                 };
                 _settingsService.Save(settings);
+                ViewModel.ApplyMode = _applyMode;
+                ViewModel.BlockMode = _blockMode;
+                ViewModel.MergeUnstable = _mergeUnstable;
+                ViewModel.Language = _currentLanguage;
             }
             catch (Exception ex)
             {
@@ -361,7 +358,7 @@ namespace AWSServerSelector
             {
                 if (selectedItems.Count != 1)
                 {
-                    MessageBox.Show(
+                    _messageService.Show(
                         "Пожалуйста, выберите только один сервер при использовании режима Universal Redirect.",
                         "Universal Redirect",
                         MessageBoxButton.OK,
@@ -388,7 +385,7 @@ namespace AWSServerSelector
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
+                    _messageService.Show(
                         "Не удалось разрешить IP-адреса для режима Universal Redirect через DNS:\n" + ex.Message,
                         "Ошибка Universal Redirect",
                         MessageBoxButton.OK,
@@ -428,7 +425,7 @@ namespace AWSServerSelector
 
                     WriteWrappedHostsSection(sb.ToString());
                     FlushDns();
-                    MessageBox.Show(
+                    _messageService.Show(
                         "Файл hosts был успешно обновлен (Universal Redirect).\n\nПожалуйста, перезапустите игру, чтобы изменения вступили в силу.",
                         "Успех",
                         MessageBoxButton.OK,
@@ -436,7 +433,7 @@ namespace AWSServerSelector
                 }
                 catch (UnauthorizedAccessException)
                 {
-                    MessageBox.Show(
+                    _messageService.Show(
                         "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
                         "Доступ запрещен",
                         MessageBoxButton.OK,
@@ -444,7 +441,7 @@ namespace AWSServerSelector
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    _messageService.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 return;
             }
@@ -452,7 +449,7 @@ namespace AWSServerSelector
             // Gatekeep mode
             if (selectedItems.Count == 0)
             {
-                MessageBox.Show(
+                _messageService.Show(
                     "Пожалуйста, выберите хотя бы один сервер для разрешения.",
                     "Сервер не выбран",
                     MessageBoxButton.OK,
@@ -484,7 +481,7 @@ namespace AWSServerSelector
                     }
                     if (missing.Count > 0)
                     {
-                        MessageBox.Show(
+                        _messageService.Show(
                             "Опция объединения нестабильных серверов включена, но стабильные серверы не найдены для: " +
                             string.Join(", ", missing) + ".\nОтключите объединение нестабильных серверов в меню настроек или выберите стабильный сервер вручную.",
                             "Стабильные серверы не найдены",
@@ -549,7 +546,7 @@ namespace AWSServerSelector
 
                 WriteWrappedHostsSection(sb.ToString());
                 FlushDns();
-                MessageBox.Show(
+                _messageService.Show(
                     "Файл hosts был успешно обновлен (Gatekeep).\n\nПожалуйста, перезапустите игру, чтобы изменения вступили в силу.",
                     "Успех",
                     MessageBoxButton.OK,
@@ -557,7 +554,7 @@ namespace AWSServerSelector
             }
             catch (UnauthorizedAccessException)
             {
-                MessageBox.Show(
+                _messageService.Show(
                     "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
                     "Доступ запрещен",
                     MessageBoxButton.OK,
@@ -565,7 +562,7 @@ namespace AWSServerSelector
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                _messageService.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -576,7 +573,7 @@ namespace AWSServerSelector
                 _hostsService.Backup();
                 WriteWrappedHostsSection(string.Empty);
                 FlushDns();
-                MessageBox.Show(
+                _messageService.Show(
                     "Записи AWS Realms очищены. Ваши существующие строки hosts остались нетронутыми.",
                     "Отменено",
                     MessageBoxButton.OK,
@@ -584,7 +581,7 @@ namespace AWSServerSelector
             }
             catch (UnauthorizedAccessException)
             {
-                MessageBox.Show(
+                _messageService.Show(
                     "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
                     "Доступ запрещен",
                     MessageBoxButton.OK,
@@ -592,7 +589,7 @@ namespace AWSServerSelector
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                _messageService.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -626,10 +623,7 @@ namespace AWSServerSelector
             var hostsFolder = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.System),
                 "drivers\\etc");
-            Process.Start(new ProcessStartInfo("explorer.exe", hostsFolder)
-            {
-                UseShellExecute = true
-            });
+            _externalNavigationService.OpenFolder(hostsFolder);
         }
 
         private void ResetHosts_Click(object sender, RoutedEventArgs e)
@@ -653,38 +647,17 @@ namespace AWSServerSelector
 
         private string GetGroupName(string region)
         {
-            if (region.StartsWith("Europe")) return "Europe";
-            if (region.StartsWith("US") || region.StartsWith("Canada") || region.StartsWith("South America"))
-                return "Americas";
-            if (region.Contains("Sydney")) return "Oceania";
-            if (region.Contains("China")) return "China";
-            return "Asia";
+            return _regionCatalogService.GetGroupName(region);
         }
         
         private string GetGroupDisplayName(string groupName)
         {
-            return groupName switch
-            {
-                "Europe" => "Europe",
-                "Americas" => "The Americas", 
-                "Asia" => "Asia (excluding Mainland China)",
-                "Oceania" => "Oceania",
-                "China" => "Mainland China",
-                _ => groupName
-            };
+            return _regionCatalogService.GetGroupDisplayName(groupName);
         }
         
         private int GetGroupOrder(string groupName)
         {
-            return groupName switch
-            {
-                "Europe" => 1,
-                "Americas" => 2,
-                "Asia" => 3,
-                "Oceania" => 4,
-                "China" => 5,
-                _ => 6
-            };
+            return _regionCatalogService.GetGroupOrder(groupName);
         }
 
         private void UpdateRegionListViewAppearance()
@@ -725,7 +698,7 @@ namespace AWSServerSelector
 
         private void OpenUrl(string url)
         {
-            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            _externalNavigationService.OpenUrl(url);
         }
 
 
@@ -918,7 +891,6 @@ namespace AWSServerSelector
         {
             var updateDialog = App.Services.GetRequiredService<UpdateDialog>();
             updateDialog.Owner = this;
-            updateDialog.StatusText = LocalizationManager.GetString("CheckingUpdates");
             
             // Запускаем проверку обновлений в диалоге
             updateDialog.StartUpdateCheck(CurrentVersion);
@@ -943,12 +915,13 @@ namespace AWSServerSelector
         {
             var dialog = App.Services.GetRequiredService<SettingsDialog>();
             dialog.Owner = this;
-            dialog.SelectedLanguage = _currentLanguage;
-            dialog.SelectedMode = _applyMode == ApplyMode.UniversalRedirect ? "service" : "hosts";
-            dialog.IsBlockBoth = _blockMode == BlockMode.Both;
-            dialog.IsBlockPing = _blockMode == BlockMode.OnlyPing;
-            dialog.IsBlockService = _blockMode == BlockMode.OnlyService;
-            dialog.IsMergeUnstable = _mergeUnstable;
+            dialog.InitializeFromSettings(
+                _currentLanguage,
+                _applyMode == ApplyMode.UniversalRedirect ? "service" : "hosts",
+                _blockMode == BlockMode.Both,
+                _blockMode == BlockMode.OnlyPing,
+                _blockMode == BlockMode.OnlyService,
+                _mergeUnstable);
             
             if (_dialogService.ShowSettingsDialog(dialog) == true)
             {
@@ -1009,7 +982,7 @@ namespace AWSServerSelector
 
         private void RestoreWindowsDefaultHostsFile()
         {
-            var confirm = MessageBox.Show(
+            var confirm = _messageService.Show(
                 "Если у вас возникли проблемы или программа не работает корректно, попробуйте сбросить файл hosts.\n\nЭто перезапишет весь ваш файл hosts значениями по умолчанию Windows.\n\nРезервная копия будет сохранена как hosts.bak. Продолжить?",
                 "Восстановить файл hosts по умолчанию Windows",
                 MessageBoxButton.YesNo,
@@ -1044,10 +1017,10 @@ namespace AWSServerSelector
                     "#       127.0.0.1       localhost\r\n" +
                     "#       ::1             localhost\r\n";
 
-                File.WriteAllText(HostsPath, defaultHosts);
+                _hostsService.Write(defaultHosts);
                 FlushDns();
 
-                MessageBox.Show(
+                _messageService.Show(
                     "Файл hosts восстановлен до шаблона по умолчанию Windows.",
                     "Успех",
                     MessageBoxButton.OK,
@@ -1055,7 +1028,7 @@ namespace AWSServerSelector
             }
             catch (UnauthorizedAccessException)
             {
-                MessageBox.Show(
+                _messageService.Show(
                     "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
                     "Доступ запрещен",
                     MessageBoxButton.OK,
@@ -1063,7 +1036,7 @@ namespace AWSServerSelector
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                _messageService.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -1397,196 +1370,6 @@ namespace AWSServerSelector
         #endregion
     }
 
-    public class ServerGroupItem : INotifyPropertyChanged
-    {
-        public string GroupName { get; set; } = string.Empty;
-        public ObservableCollection<ServerItem> Servers { get; set; } = new();
-        public bool IsExpanded { get; set; } = true;
-        
-        private bool _isGroupHovered;
-        public bool IsGroupHovered
-        {
-            get => _isGroupHovered;
-            set
-            {
-                if (_isGroupHovered != value)
-                {
-                    _isGroupHovered = value;
-                    OnPropertyChanged(nameof(IsGroupHovered));
-                }
-            }
-        }
-        
-        private bool? _isAllSelected;
-        public bool? IsAllSelected
-        {
-            get => _isAllSelected;
-            set
-            {
-                if (_isAllSelected != value)
-                {
-                    _isAllSelected = value;
-                    OnPropertyChanged(nameof(IsAllSelected));
-                    
-                    // Update all servers in the group
-                    if (value.HasValue)
-                    {
-                        foreach (var server in Servers)
-                        {
-                            // Temporarily disable the notification to avoid circular updates
-                            var oldParent = server.ParentGroup;
-                            server.ParentGroup = null;
-                            server.IsSelected = value.Value;
-                            server.ParentGroup = oldParent;
-                        }
-                    }
-                }
-            }
-        }
-        
-        public event PropertyChangedEventHandler? PropertyChanged;
-        
-        public virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-        
-        public void UpdateSelectAllState()
-        {
-            if (Servers.Count == 0)
-            {
-                _isAllSelected = false;
-                OnPropertyChanged(nameof(IsAllSelected));
-                return;
-            }
-            
-            var selectedCount = Servers.Count(s => s.IsSelected);
-            bool? newState;
-            if (selectedCount == 0)
-                newState = false;
-            else if (selectedCount == Servers.Count)
-                newState = true;
-            else
-                newState = null; // Indeterminate state
-                
-            if (_isAllSelected != newState)
-            {
-                _isAllSelected = newState;
-                OnPropertyChanged(nameof(IsAllSelected));
-            }
-        }
-    }
-
-    public class ServerItem : INotifyPropertyChanged
-    {
-        public string RegionKey { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-        public string ToolTipText { get; set; } = string.Empty;
-        public bool IsStable { get; set; }
-        public ServerGroupItem? ParentGroup { get; set; }
-        
-        private bool _isSelected;
-        public bool IsSelected
-        {
-            get => _isSelected;
-            set
-            {
-                _isSelected = value;
-                OnPropertyChanged(nameof(IsSelected));
-                
-                // Notify parent group to update its select all state
-                ParentGroup?.UpdateSelectAllState();
-            }
-        }
-        
-        private string _latencyText = "…";
-        public string LatencyText
-        {
-            get => _latencyText;
-            set
-            {
-                _latencyText = value;
-                OnPropertyChanged(nameof(LatencyText));
-            }
-        }
-        
-        private SolidColorBrush _textColor = new SolidColorBrush(Colors.White);
-        public SolidColorBrush TextColor
-        {
-            get => _textColor;
-            set
-            {
-                _textColor = value;
-                OnPropertyChanged(nameof(TextColor));
-            }
-        }
-        
-        private SolidColorBrush _latencyColor = new SolidColorBrush(Colors.Gray);
-        public SolidColorBrush LatencyColor
-        {
-            get => _latencyColor;
-            set
-            {
-                _latencyColor = value;
-                OnPropertyChanged(nameof(LatencyColor));
-            }
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-
-        public virtual void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        public override string ToString()
-        {
-            return $"{DisplayName} - {LatencyText}";
-        }
-
-        private ICommand? _toggleSelectionCommand;
-        public ICommand ToggleSelectionCommand
-        {
-            get
-            {
-                if (_toggleSelectionCommand == null)
-                {
-                    _toggleSelectionCommand = new RelayCommand(() => IsSelected = !IsSelected);
-                }
-                return _toggleSelectionCommand;
-            }
-        }
-    }
-
-    // Simple RelayCommand implementation
-    public class RelayCommand : ICommand
-    {
-        private readonly Action _execute;
-        private readonly Func<bool>? _canExecute;
-
-        public RelayCommand(Action execute, Func<bool>? canExecute = null)
-        {
-            _execute = execute ?? throw new ArgumentNullException(nameof(execute));
-            _canExecute = canExecute;
-        }
-
-        public event EventHandler? CanExecuteChanged
-        {
-            add { CommandManager.RequerySuggested += value; }
-            remove { CommandManager.RequerySuggested -= value; }
-        }
-
-        public bool CanExecute(object? parameter)
-        {
-            return _canExecute?.Invoke() ?? true;
-        }
-
-        public void Execute(object? parameter)
-        {
-            _execute();
-        }
-    }
-
     // Event handlers
     public partial class MainWindow
     {
@@ -1701,16 +1484,11 @@ namespace AWSServerSelector
             try
             {
                 // Open hosts file in default text editor
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = HostsPath,
-                    UseShellExecute = true,
-                    Verb = "open"
-                });
+                _externalNavigationService.OpenFile(HostsPath);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                _messageService.Show(
                     $"Не удалось открыть файл hosts: {ex.Message}\n\nПуть: {HostsPath}",
                     "Ошибка",
                     MessageBoxButton.OK,
@@ -1748,7 +1526,7 @@ namespace AWSServerSelector
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                _messageService.Show(
                     $"Не удалось открыть окно информации о подключении: {ex.Message}",
                     "Ошибка",
                     MessageBoxButton.OK,

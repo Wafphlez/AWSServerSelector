@@ -80,6 +80,12 @@
   - выбор сервера кликом по элементу сохраняется;
   - визуально список не отличается от baseline.
 
+### 11. Командный слой MainWindow
+- Использовать меню (`Settings`, `About`, `Check Updates`, `Open Hosts`, `Connection Info`) и нижние кнопки (`Reset to default`, `Apply Selection`).
+- Ожидание:
+  - действия выполняются через MVVM-команды без regressions в поведении;
+  - все окна открываются и закрываются корректно.
+
 ## Чек финализации
 - `dotnet restore` успешно.
 - `dotnet build` успешно.

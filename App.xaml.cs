@@ -42,6 +42,10 @@ namespace AWSServerSelector
             services.AddSingleton<IAwsIpRangeService, AwsIpRangeService>();
             services.AddSingleton<IConnectionMonitorService, ConnectionMonitorService>();
             services.AddSingleton<IDialogService, DialogService>();
+            services.AddSingleton<IRegionCatalogService, RegionCatalogService>();
+            services.AddSingleton<IMessageService, MessageService>();
+            services.AddSingleton<IExternalNavigationService, ExternalNavigationService>();
+            services.AddSingleton<IClipboardService, ClipboardService>();
 
             services.AddSingleton<MainWindow>();
             services.AddTransient<SettingsDialogViewModel>();
