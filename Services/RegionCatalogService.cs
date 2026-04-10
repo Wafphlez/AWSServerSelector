@@ -9,23 +9,29 @@ public sealed class RegionCatalogService : IRegionCatalogService
     private readonly Dictionary<string, int> _groupOrders;
     public IReadOnlyDictionary<string, RegionDefinition> Regions { get; }
 
-    public RegionCatalogService(IOptions<RegionCatalogOptions>? options = null)
+    public RegionCatalogService(IOptions<RegionCatalogOptions> options)
     {
-        var configuredRegions = options?.Value?.Regions ?? [];
-        var sanitized = configuredRegions
-            .Where(region => !string.IsNullOrWhiteSpace(region.Key) && region.Hosts.Length > 0)
-            .GroupBy(region => region.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .ToList();
-        var source = sanitized.Count > 0 ? sanitized : GetFallbackRegions();
-
-        if (sanitized.Count == 0)
+        var regions = options.Value.Regions;
+        if (regions.Count == 0)
         {
-            AppLogger.Error("Region catalog config is empty or missing. Using built-in fallback.");
+            throw new InvalidOperationException("RegionCatalog.Regions must contain at least one region.");
         }
 
-        Regions = source.ToDictionary(region => region.Key, StringComparer.OrdinalIgnoreCase);
-        _groupOrders = BuildGroupOrders(source);
+        var duplicateKey = regions
+            .GroupBy(region => region.Key, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateKey != null)
+        {
+            throw new InvalidOperationException($"RegionCatalog.Regions contains duplicate key '{duplicateKey.Key}'.");
+        }
+
+        foreach (var region in regions)
+        {
+            ValidateRegion(region);
+        }
+
+        Regions = regions.ToDictionary(region => region.Key, StringComparer.OrdinalIgnoreCase);
+        _groupOrders = BuildGroupOrders(regions);
     }
 
     public string GetGroupName(string regionKey) => Regions.TryGetValue(regionKey, out var region) ? region.GroupKey : "Other";
@@ -54,24 +60,31 @@ public sealed class RegionCatalogService : IRegionCatalogService
         return orders;
     }
 
-    private static List<RegionDefinition> GetFallbackRegions() =>
-    [
-        new("Europe (London)", "Europe", "Europe", ["gamelift.eu-west-2.amazonaws.com", "gamelift-ping.eu-west-2.api.aws"], false, "Europe_London"),
-        new("Europe (Ireland)", "Europe", "Europe", ["gamelift.eu-west-1.amazonaws.com", "gamelift-ping.eu-west-1.api.aws"], true, "Europe_Ireland"),
-        new("Europe (Frankfurt am Main)", "Europe", "Europe", ["gamelift.eu-central-1.amazonaws.com", "gamelift-ping.eu-central-1.api.aws"], true, "Europe_Frankfurt"),
-        new("US East (N. Virginia)", "Americas", "The Americas", ["gamelift.us-east-1.amazonaws.com", "gamelift-ping.us-east-1.api.aws"], true, "US_East_Virginia"),
-        new("US East (Ohio)", "Americas", "The Americas", ["gamelift.us-east-2.amazonaws.com", "gamelift-ping.us-east-2.api.aws"], false, "US_East_Ohio"),
-        new("US West (N. California)", "Americas", "The Americas", ["gamelift.us-west-1.amazonaws.com", "gamelift-ping.us-west-1.api.aws"], true, "US_West_California"),
-        new("US West (Oregon)", "Americas", "The Americas", ["gamelift.us-west-2.amazonaws.com", "gamelift-ping.us-west-2.api.aws"], true, "US_West_Oregon"),
-        new("Canada (Central)", "Americas", "The Americas", ["gamelift.ca-central-1.amazonaws.com", "gamelift-ping.ca-central-1.api.aws"], false, "Canada_Central"),
-        new("South America (São Paulo)", "Americas", "The Americas", ["gamelift.sa-east-1.amazonaws.com", "gamelift-ping.sa-east-1.api.aws"], true, "South_America_Sao_Paulo"),
-        new("Asia Pacific (Tokyo)", "Asia", "Asia (excluding Mainland China)", ["gamelift.ap-northeast-1.amazonaws.com", "gamelift-ping.ap-northeast-1.api.aws"], true, "Asia_Tokyo"),
-        new("Asia Pacific (Seoul)", "Asia", "Asia (excluding Mainland China)", ["gamelift.ap-northeast-2.amazonaws.com", "gamelift-ping.ap-northeast-2.api.aws"], true, "Asia_Seoul"),
-        new("Asia Pacific (Mumbai)", "Asia", "Asia (excluding Mainland China)", ["gamelift.ap-south-1.amazonaws.com", "gamelift-ping.ap-south-1.api.aws"], true, "Asia_Mumbai"),
-        new("Asia Pacific (Singapore)", "Asia", "Asia (excluding Mainland China)", ["gamelift.ap-southeast-1.amazonaws.com", "gamelift-ping.ap-southeast-1.api.aws"], true, "Asia_Singapore"),
-        new("Asia Pacific (Hong Kong)", "Asia", "Asia (excluding Mainland China)", ["ec2.ap-east-1.amazonaws.com", "gamelift-ping.ap-east-1.api.aws"], true, "Asia_Hong_Kong"),
-        new("Asia Pacific (Sydney)", "Oceania", "Oceania", ["gamelift.ap-southeast-2.amazonaws.com", "gamelift-ping.ap-southeast-2.api.aws"], true, "Asia_Sydney"),
-        new("China (Beijing)", "China", "Mainland China", ["gamelift.cn-north-1.amazonaws.com.cn"], true, "China_Beijing"),
-        new("China (Ningxia)", "China", "Mainland China", ["gamelift.cn-northwest-1.amazonaws.com.cn"], true, "China_Ningxia")
-    ];
+    private static void ValidateRegion(RegionDefinition region)
+    {
+        if (string.IsNullOrWhiteSpace(region.Key))
+        {
+            throw new InvalidOperationException("RegionCatalog contains a region with empty key.");
+        }
+
+        if (string.IsNullOrWhiteSpace(region.GroupKey))
+        {
+            throw new InvalidOperationException($"Region '{region.Key}' has empty groupKey.");
+        }
+
+        if (string.IsNullOrWhiteSpace(region.GroupDisplayName))
+        {
+            throw new InvalidOperationException($"Region '{region.Key}' has empty groupDisplayName.");
+        }
+
+        if (region.Hosts.Length == 0 || region.Hosts.Any(string.IsNullOrWhiteSpace))
+        {
+            throw new InvalidOperationException($"Region '{region.Key}' must contain non-empty hosts.");
+        }
+
+        if (string.IsNullOrWhiteSpace(region.DisplayNameKey))
+        {
+            throw new InvalidOperationException($"Region '{region.Key}' has empty displayNameKey.");
+        }
+    }
 }

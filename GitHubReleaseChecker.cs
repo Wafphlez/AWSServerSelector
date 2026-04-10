@@ -50,16 +50,13 @@ namespace AWSServerSelector
         private readonly UpdateOptions _updateOptions;
         public string? LastError { get; private set; }
 
-        public GitHubReleaseChecker(string currentVersion, UpdateOptions? updateOptions = null)
+        public GitHubReleaseChecker(string currentVersion, UpdateOptions updateOptions)
         {
             _currentVersion = currentVersion;
-            _updateOptions = updateOptions ?? new UpdateOptions();
+            _updateOptions = updateOptions;
             _httpClient = new HttpClient();
-            _httpClient.Timeout = TimeSpan.FromSeconds(Math.Clamp(_updateOptions.TimeoutSeconds, 3, 120));
-            var userAgent = string.IsNullOrWhiteSpace(_updateOptions.UserAgent)
-                ? "AWSServerSelector-UpdateChecker/1.0"
-                : _updateOptions.UserAgent;
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
+            _httpClient.Timeout = TimeSpan.FromSeconds(_updateOptions.TimeoutSeconds);
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", _updateOptions.UserAgent);
         }
 
         public async Task<GitHubReleaseInfo?> GetLatestReleaseAsync()
@@ -67,10 +64,7 @@ namespace AWSServerSelector
             try
             {
                 LastError = null;
-                var apiUrl = string.IsNullOrWhiteSpace(_updateOptions.LatestReleaseApiUrl)
-                    ? "https://api.github.com/repos/Wafphlez/AWSServerSelector/releases/latest"
-                    : _updateOptions.LatestReleaseApiUrl;
-                var response = await _httpClient.GetStringAsync(apiUrl);
+                var response = await _httpClient.GetStringAsync(_updateOptions.LatestReleaseApiUrl);
                 var release = JsonSerializer.Deserialize<GitHubReleaseInfo>(response);
                 
                 // Отладочная информация

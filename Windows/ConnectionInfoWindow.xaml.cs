@@ -64,13 +64,13 @@ namespace AWSServerSelector
             IMessageService messageService,
             IClipboardService clipboardService,
             IRegionCatalogService regionCatalogService,
-            IOptions<MonitoringOptions>? monitoringOptions)
+            IOptions<MonitoringOptions> monitoringOptions)
         {
             _connectionMonitorService = connectionMonitorService;
             _messageService = messageService;
             _clipboardService = clipboardService;
             _regionCatalogService = regionCatalogService;
-            _monitoringOptions = monitoringOptions?.Value ?? new MonitoringOptions();
+            _monitoringOptions = monitoringOptions.Value;
             _awsRegionToGameLiftHosts = BuildAwsRegionToHostsMap(_regionCatalogService.Regions.Values);
             InitializeComponent();
             DataContext = _viewModel;
@@ -117,7 +117,7 @@ namespace AWSServerSelector
         {
             _monitoringTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(Math.Clamp(_monitoringOptions.ConnectionPollIntervalSeconds, 1, 120))
+                Interval = TimeSpan.FromSeconds(_monitoringOptions.ConnectionPollIntervalSeconds)
             };
             _monitoringTimer.Tick += async (s, e) => await MonitorConnectionsAsync();
             _monitoringTimer.Start();
@@ -585,8 +585,7 @@ namespace AWSServerSelector
             {
                 try
                 {
-                    var pingTimeout = Math.Clamp(_monitoringOptions.ConnectionPingTimeoutMs, 250, 10000);
-                    var reply = await _pinger.SendPingAsync(connection.RemoteAddress, pingTimeout);
+                    var reply = await _pinger.SendPingAsync(connection.RemoteAddress, _monitoringOptions.ConnectionPingTimeoutMs);
                     connection.Ping = reply.Status == IPStatus.Success ? reply.RoundtripTime : -1;
                 }
                 catch
@@ -642,7 +641,7 @@ namespace AWSServerSelector
             try
             {
                 using var httpClient = new System.Net.Http.HttpClient();
-                httpClient.Timeout = TimeSpan.FromSeconds(Math.Clamp(_monitoringOptions.IpApiTimeoutSeconds, 2, 30));
+                httpClient.Timeout = TimeSpan.FromSeconds(_monitoringOptions.IpApiTimeoutSeconds);
                 
                 var response = await httpClient.GetStringAsync($"http://ip-api.com/json/{ip}?fields=status,country,countryCode,regionName,city");
                 
@@ -1250,7 +1249,7 @@ namespace AWSServerSelector
             // Создаём DispatcherTimer (работает в UI потоке, гарантирует синхронность)
             _pingTimer = new DispatcherTimer 
             { 
-                Interval = TimeSpan.FromSeconds(Math.Clamp(_monitoringOptions.ConnectionGamePingIntervalSeconds, 1, 10))
+                Interval = TimeSpan.FromSeconds(_monitoringOptions.ConnectionGamePingIntervalSeconds)
             };
             _pingTimer.Tick += async (_, __) => await UpdatePingAsync();
             _pingTimer.Start();
@@ -1358,8 +1357,7 @@ namespace AWSServerSelector
                 Debug.WriteLine($"🏓 Попытка пинга к {_currentGameServerIp}...");
                 
                 // Простой ICMP ping к GameLift хосту (как на главной странице)
-                var pingTimeout = Math.Clamp(_monitoringOptions.ConnectionPingTimeoutMs, 250, 10000);
-                var reply = await _backgroundPinger.SendPingAsync(_currentGameServerIp, pingTimeout);
+                var reply = await _backgroundPinger.SendPingAsync(_currentGameServerIp, _monitoringOptions.ConnectionPingTimeoutMs);
                 
                 if (reply.Status == IPStatus.Success)
                 {

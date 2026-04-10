@@ -78,8 +78,8 @@ namespace AWSServerSelector
             IRegionCatalogService regionCatalogService,
             IMessageService messageService,
             IExternalNavigationService externalNavigationService,
-            IOptions<AppLinksOptions>? appLinksOptions,
-            IOptions<MonitoringOptions>? monitoringOptions)
+            IOptions<AppLinksOptions> appLinksOptions,
+            IOptions<MonitoringOptions> monitoringOptions)
         {
             _settingsService = settingsService;
             _hostsService = hostsService;
@@ -88,8 +88,8 @@ namespace AWSServerSelector
             _regionCatalogService = regionCatalogService;
             _messageService = messageService;
             _externalNavigationService = externalNavigationService;
-            _appLinksOptions = appLinksOptions?.Value ?? new AppLinksOptions();
-            _monitoringOptions = monitoringOptions?.Value ?? new MonitoringOptions();
+            _appLinksOptions = appLinksOptions.Value;
+            _monitoringOptions = monitoringOptions.Value;
             _regions = _regionCatalogService.Regions;
 
             ViewModel = new MainWindowViewModel(
@@ -260,8 +260,7 @@ namespace AWSServerSelector
 
         private void StartPingTimer()
         {
-            var seconds = Math.Clamp(_monitoringOptions.MainPingIntervalSeconds, 1, 120);
-            _pingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(seconds) };
+            _pingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_monitoringOptions.MainPingIntervalSeconds) };
             _pingTimer.Tick += async (_, __) => await UpdatePingResults();
             _pingTimer.Start();
         }
@@ -285,8 +284,7 @@ namespace AWSServerSelector
                     try
                     {
                         var hosts = _regions[item.RegionKey].Hosts;
-                        var pingTimeout = Math.Clamp(_monitoringOptions.MainPingTimeoutMs, 250, 10000);
-                        ms = await _latencyService.PingAsync(hosts[0], pingTimeout);
+                        ms = await _latencyService.PingAsync(hosts[0], _monitoringOptions.MainPingTimeoutMs);
                     }
                     catch
                     {
@@ -406,7 +404,7 @@ namespace AWSServerSelector
                     var sb = new StringBuilder();
                     sb.AppendLine("# Edited by Ping by Daylight");
                     sb.AppendLine("# Universal Redirect mode: redirect all GameLift endpoints to selected region");
-                    sb.AppendLine($"# Need help? Discord: {GetDiscordUrl()}");
+                    sb.AppendLine($"# Need help? Discord: {_appLinksOptions.DiscordUrl}");
                     sb.AppendLine();
 
                     string currentGroup = "";
@@ -517,7 +515,7 @@ namespace AWSServerSelector
                 var sb = new StringBuilder();
                 sb.AppendLine("# Edited by Ping by Daylight");
                 sb.AppendLine("# Unselected servers are blocked (Gatekeep Mode); selected servers are commented out.");
-                sb.AppendLine($"# Need help? Discord: {GetDiscordUrl()}");
+                sb.AppendLine($"# Need help? Discord: {_appLinksOptions.DiscordUrl}");
                 sb.AppendLine();
 
                 string currentGroup = "";
@@ -636,13 +634,6 @@ namespace AWSServerSelector
         private int GetGroupOrder(string groupName)
         {
             return _regionCatalogService.GetGroupOrder(groupName);
-        }
-
-        private string GetDiscordUrl()
-        {
-            return string.IsNullOrWhiteSpace(_appLinksOptions.DiscordUrl)
-                ? "https://discord.gg/gnvtATeVc4"
-                : _appLinksOptions.DiscordUrl;
         }
 
         private void UpdateRegionListViewAppearance()

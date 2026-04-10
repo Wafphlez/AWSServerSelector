@@ -10,9 +10,9 @@ public sealed class UpdateService : IUpdateService
     private readonly UpdateOptions _updateOptions;
     public string? LastError { get; private set; }
 
-    public UpdateService(IOptions<UpdateOptions>? updateOptions = null)
+    public UpdateService(IOptions<UpdateOptions> updateOptions)
     {
-        _updateOptions = updateOptions?.Value ?? new UpdateOptions();
+        _updateOptions = updateOptions.Value;
     }
 
     public async Task<GitHubReleaseInfo?> GetLatestReleaseAsync(string currentVersion)
