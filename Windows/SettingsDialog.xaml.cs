@@ -4,11 +4,13 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
+using AWSServerSelector.ViewModels;
 
 namespace AWSServerSelector
 {
     public partial class SettingsDialog : Window, INotifyPropertyChanged
     {
+        private readonly SettingsDialogViewModel _viewModel;
         public event PropertyChangedEventHandler? PropertyChanged;
 
         private string _title = "Settings";
@@ -20,59 +22,44 @@ namespace AWSServerSelector
 
         public string SettingsTitle => LocalizationManager.GetString("Settings");
 
-        private string _selectedLanguage = "en"; // Default to English
         public string SelectedLanguage
         {
-            get => _selectedLanguage;
-            set => SetProperty(ref _selectedLanguage, value);
+            get => _viewModel.SelectedLanguage;
+            set => _viewModel.SelectedLanguage = value;
         }
 
-        private string _selectedMode = "hosts";
         public string SelectedMode
         {
-            get => _selectedMode;
-            set => SetProperty(ref _selectedMode, value);
+            get => _viewModel.SelectedMode;
+            set => _viewModel.SelectedMode = value;
         }
 
-        private bool _isBlockBoth = true;
         public bool IsBlockBoth
         {
-            get => _isBlockBoth;
-            set => SetProperty(ref _isBlockBoth, value);
+            get => _viewModel.IsBlockBoth;
+            set => _viewModel.IsBlockBoth = value;
         }
 
-        private bool _isBlockPing = false;
         public bool IsBlockPing
         {
-            get => _isBlockPing;
-            set => SetProperty(ref _isBlockPing, value);
+            get => _viewModel.IsBlockPing;
+            set => _viewModel.IsBlockPing = value;
         }
 
-        private bool _isBlockService = false;
         public bool IsBlockService
         {
-            get => _isBlockService;
-            set => SetProperty(ref _isBlockService, value);
+            get => _viewModel.IsBlockService;
+            set => _viewModel.IsBlockService = value;
         }
 
-        private bool _isMergeUnstable = false;
         public bool IsMergeUnstable
         {
-            get => _isMergeUnstable;
-            set => SetProperty(ref _isMergeUnstable, value);
+            get => _viewModel.IsMergeUnstable;
+            set => _viewModel.IsMergeUnstable = value;
         }
 
-        public List<LanguageItem> Languages { get; } = new List<LanguageItem>
-        {
-            new LanguageItem { Code = "en", Name = "English" },
-            new LanguageItem { Code = "ru", Name = "Русский" }
-        };
-
-        public List<ModeItem> Modes { get; } = new List<ModeItem>
-        {
-            new ModeItem { Code = "hosts", Name = "Hosts File" },
-            new ModeItem { Code = "service", Name = "Service" }
-        };
+        public List<LanguageItem> Languages => _viewModel.Languages;
+        public List<ModeItem> Modes => _viewModel.Modes;
 
         public string LanguageText => LocalizationManager.GetString("Language");
         public string MethodText => LocalizationManager.GetString("Method");
@@ -84,8 +71,9 @@ namespace AWSServerSelector
         public string DefaultOptionsText => LocalizationManager.GetString("DefaultOptions");
         public string ApplyChangesText => LocalizationManager.GetString("ApplyChanges");
 
-        public SettingsDialog()
+        public SettingsDialog(SettingsDialogViewModel viewModel)
         {
+            _viewModel = viewModel;
             InitializeComponent();
             DataContext = this;
             

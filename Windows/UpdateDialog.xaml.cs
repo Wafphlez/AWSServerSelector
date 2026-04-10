@@ -1,161 +1,104 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Net.Http;
 using System.Threading.Tasks;
 using System.Windows;
+using AWSServerSelector.ViewModels;
 
 namespace AWSServerSelector
 {
     public partial class UpdateDialog : Window, INotifyPropertyChanged
     {
-        private string _statusText = "Проверяем наличие обновлений...";
-        private string _updateTitle = "";
-        private string _updateDescription = "";
-        private string _updateSize = "";
-        private string _downloadUrl = "";
-        private string _yourVersionText = "";
-        private string _latestVersionText = "";
+        private readonly UpdateDialogViewModel _viewModel;
 
         public string StatusText 
         { 
-            get => _statusText; 
+            get => _viewModel.StatusText;
             set 
             { 
-                _statusText = value; 
+                _viewModel.StatusText = value;
                 OnPropertyChanged(nameof(StatusText)); 
             } 
         }
 
         public string UpdateTitle 
         { 
-            get => _updateTitle; 
+            get => _viewModel.UpdateTitle;
             set 
             { 
-                _updateTitle = value; 
+                _viewModel.UpdateTitle = value;
                 OnPropertyChanged(nameof(UpdateTitle)); 
             } 
         }
 
         public string UpdateDescription 
         { 
-            get => _updateDescription; 
+            get => _viewModel.UpdateDescription;
             set 
             { 
-                _updateDescription = value; 
+                _viewModel.UpdateDescription = value;
                 OnPropertyChanged(nameof(UpdateDescription)); 
             } 
         }
 
         public string UpdateSize 
         { 
-            get => _updateSize; 
+            get => _viewModel.UpdateSize;
             set 
             { 
-                _updateSize = value; 
+                _viewModel.UpdateSize = value;
                 OnPropertyChanged(nameof(UpdateSize)); 
             } 
         }
 
         public string YourVersionText 
         { 
-            get => _yourVersionText; 
+            get => _viewModel.YourVersionText;
             set 
             { 
-                _yourVersionText = value; 
+                _viewModel.YourVersionText = value;
                 OnPropertyChanged(nameof(YourVersionText)); 
             } 
         }
 
         public string LatestVersionText 
         { 
-            get => _latestVersionText; 
+            get => _viewModel.LatestVersionText;
             set 
             { 
-                _latestVersionText = value; 
+                _viewModel.LatestVersionText = value;
                 OnPropertyChanged(nameof(LatestVersionText)); 
             } 
         }
 
-        public UpdateDialog()
+        public UpdateDialog(UpdateDialogViewModel viewModel)
         {
+            _viewModel = viewModel;
             InitializeComponent();
             DataContext = this;
-            
-            // Инициализируем актуальную версию как "загрузка..."
-            var latestVersionLabel = LocalizationManager.GetString("LatestVersion") ?? "Latest version:";
-            var checkingText = LocalizationManager.GetString("CheckingUpdates") ?? "Checking for updates...";
-            LatestVersionText = $"{latestVersionLabel} {checkingText}";
-            
-            // Отладочная информация
-            System.Diagnostics.Debug.WriteLine($"UpdateDialog - Constructor initialization:");
-            System.Diagnostics.Debug.WriteLine($"  Label: '{latestVersionLabel}'");
-            System.Diagnostics.Debug.WriteLine($"  Checking text: '{checkingText}'");
-            System.Diagnostics.Debug.WriteLine($"  Final text: '{LatestVersionText}'");
+            _viewModel.PropertyChanged += (_, e) => OnPropertyChanged(e.PropertyName ?? string.Empty);
         }
 
         public void StartUpdateCheck(string currentVersion)
         {
-            // Устанавливаем текущую версию
-            var yourVersionLabel = LocalizationManager.GetString("YourVersion") ?? "Your version:";
-            YourVersionText = $"{yourVersionLabel} {currentVersion}";
-            
-            // Отладочная информация
-            System.Diagnostics.Debug.WriteLine($"UpdateDialog - StartUpdateCheck:");
-            System.Diagnostics.Debug.WriteLine($"  Current version: '{currentVersion}'");
-            System.Diagnostics.Debug.WriteLine($"  Your version label: '{yourVersionLabel}'");
-            System.Diagnostics.Debug.WriteLine($"  Your version text: '{YourVersionText}'");
-            
             _ = Task.Run(async () =>
             {
                 try
                 {
-                    using var releaseChecker = new GitHubReleaseChecker(currentVersion);
-                    var latestRelease = await releaseChecker.GetLatestReleaseAsync();
+                    await _viewModel.CheckForUpdatesAsync(currentVersion);
                     
                     await Dispatcher.InvokeAsync(() =>
                     {
-                        if (latestRelease != null)
+                        if (!string.IsNullOrWhiteSpace(_viewModel.DownloadUrl))
                         {
-                            // Устанавливаем актуальную версию (убираем префикс "v")
-                            var latestVersionLabel = LocalizationManager.GetString("LatestVersion") ?? "Latest version:";
-                            var versionNumber = latestRelease.TagName?.TrimStart('v') ?? "unknown";
-                            LatestVersionText = $"{latestVersionLabel} {versionNumber}";
-                            
-                            // Отладочная информация
-                            System.Diagnostics.Debug.WriteLine($"UpdateDialog - Setting latest version:");
-                            System.Diagnostics.Debug.WriteLine($"  Label: '{latestVersionLabel}'");
-                            System.Diagnostics.Debug.WriteLine($"  TagName: '{latestRelease.TagName}'");
-                            System.Diagnostics.Debug.WriteLine($"  Cleaned version: '{versionNumber}'");
-                            System.Diagnostics.Debug.WriteLine($"  Final text: '{LatestVersionText}'");
-                            
-                            if (releaseChecker.IsUpdateAvailable(latestRelease))
-                            {
-                                var downloadAsset = releaseChecker.GetDownloadAsset(latestRelease);
-                                if (downloadAsset != null)
-                                {
-                                    SetUpdateInfo(latestRelease, downloadAsset);
-                                }
-                                else
-                                {
-                                    StatusText = LocalizationManager.GetString("UpdateDownloadUnavailable");
-                                }
-                            }
-                            else
-                            {
-                                SetNoUpdateInfo();
-                            }
+                            UpdateInfoPanel.Visibility = Visibility.Visible;
+                            DownloadButton.Visibility = Visibility.Visible;
+                            DownloadButton.Content = LocalizationManager.GetString("DownloadUpdate");
                         }
                         else
                         {
-                            // Если не удалось получить информацию о релизе, показываем ошибку
-                            var latestVersionLabel = LocalizationManager.GetString("LatestVersion") ?? "Latest version:";
-                            var errorText = LocalizationManager.GetString("UpdateCheckFailed") ?? "Failed to get update information.";
-                            LatestVersionText = $"{latestVersionLabel} {errorText}";
-                            StatusText = string.IsNullOrWhiteSpace(releaseChecker.LastError)
-                                ? LocalizationManager.GetString("UpdateCheckFailed")
-                                : $"{LocalizationManager.GetString("UpdateCheckFailed")} {releaseChecker.LastError}";
+                            UpdateInfoPanel.Visibility = Visibility.Collapsed;
+                            DownloadButton.Visibility = Visibility.Collapsed;
                         }
                     });
                 }
@@ -163,47 +106,11 @@ namespace AWSServerSelector
                 {
                     await Dispatcher.InvokeAsync(() =>
                     {
-                        var latestVersionLabel = LocalizationManager.GetString("LatestVersion") ?? "Latest version:";
                         var errorText = LocalizationManager.GetString("UpdateCheckError") ?? "Error checking for updates:";
-                        LatestVersionText = $"{latestVersionLabel} {errorText}";
                         StatusText = $"{LocalizationManager.GetString("UpdateCheckError")} {ex.Message}";
                     });
                 }
             });
-        }
-
-        public void SetUpdateInfo(GitHubReleaseInfo release, GitHubAsset downloadAsset)
-        {
-            var cleanVersion = release.TagName?.TrimStart('v') ?? "unknown";
-            UpdateTitle = $"{LocalizationManager.GetString("UpdateAvailable")} {cleanVersion}";
-            UpdateDescription = release.Body.Length > 200 ? 
-                release.Body.Substring(0, 200) + "..." : release.Body;
-            UpdateSize = $"{LocalizationManager.GetString("UpdateSize")} {FormatFileSize(downloadAsset.Size)}";
-            _downloadUrl = downloadAsset.BrowserDownloadUrl;
-            
-            UpdateInfoPanel.Visibility = Visibility.Visible;
-            DownloadButton.Visibility = Visibility.Visible;
-            DownloadButton.Content = LocalizationManager.GetString("DownloadUpdate");
-        }
-
-        public void SetNoUpdateInfo()
-        {
-            StatusText = LocalizationManager.GetString("NoUpdatesAvailable");
-            UpdateInfoPanel.Visibility = Visibility.Collapsed;
-            DownloadButton.Visibility = Visibility.Collapsed;
-        }
-
-        private string FormatFileSize(long bytes)
-        {
-            string[] sizes = { "B", "KB", "MB", "GB" };
-            double len = bytes;
-            int order = 0;
-            while (len >= 1024 && order < sizes.Length - 1)
-            {
-                order++;
-                len = len / 1024;
-            }
-            return $"{len:0.##} {sizes[order]}";
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -214,7 +121,7 @@ namespace AWSServerSelector
 
         private async void DownloadButton_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrEmpty(_downloadUrl))
+            if (string.IsNullOrEmpty(_viewModel.DownloadUrl))
             {
                 MessageBox.Show("Ссылка для скачивания недоступна.", "Ошибка", 
                     MessageBoxButton.OK, MessageBoxImage.Error);
@@ -229,7 +136,7 @@ namespace AWSServerSelector
                 // Открываем ссылку в браузере
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = _downloadUrl,
+                    FileName = _viewModel.DownloadUrl,
                     UseShellExecute = true
                 });
 

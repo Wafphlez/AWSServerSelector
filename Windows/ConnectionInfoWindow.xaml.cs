@@ -15,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using System.Management;
 using System.Runtime.Versioning;
+using AWSServerSelector.Services.Interfaces;
 using AWSServerSelector.ViewModels;
 
 namespace AWSServerSelector
@@ -23,6 +24,7 @@ namespace AWSServerSelector
     public partial class ConnectionInfoWindow : Window, INotifyPropertyChanged
     {
         private readonly ConnectionInfoViewModel _viewModel = new();
+        private readonly IConnectionMonitorService _connectionMonitorService;
         #region Fields
 
         private DispatcherTimer? _monitoringTimer;
@@ -50,8 +52,9 @@ namespace AWSServerSelector
 
         #region Constructor
 
-        public ConnectionInfoWindow()
+        public ConnectionInfoWindow(IConnectionMonitorService connectionMonitorService)
         {
+            _connectionMonitorService = connectionMonitorService;
             InitializeComponent();
             DataContext = _viewModel;
             _viewModel.LastUpdateText = LocalizationManager.Initializing;
@@ -1132,21 +1135,22 @@ namespace AWSServerSelector
 
         private void UpdateNoConnection()
         {
+            var snapshot = _connectionMonitorService.GetCurrentSnapshotAsync().GetAwaiter().GetResult();
             LobbyStatusText.Text = LocalizationManager.GameNotRunning;
             LobbyStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)); // Gray
-            LobbyIpText.Text = LocalizationManager.NotDetermined;
+            LobbyIpText.Text = snapshot.Lobby.IpText;
             CopyLobbyIpButton.Visibility = Visibility.Collapsed;
-            LobbyServerText.Text = LocalizationManager.NotDetermined;
-            LobbyRegionText.Text = LocalizationManager.NotDetermined;
-            LobbyPingText.Text = LocalizationManager.NotMeasured;
+            LobbyServerText.Text = snapshot.Lobby.ServerText;
+            LobbyRegionText.Text = snapshot.Lobby.RegionText;
+            LobbyPingText.Text = snapshot.Lobby.PingText;
 
             GameStatusText.Text = LocalizationManager.GameNotRunning;
             GameStatusText.Foreground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80)); // Gray
-            GameIpText.Text = LocalizationManager.NotDetermined;
+            GameIpText.Text = snapshot.Game.IpText;
             CopyGameIpButton.Visibility = Visibility.Collapsed;
-            GameServerText.Text = LocalizationManager.NotDetermined;
-            GameRegionText.Text = LocalizationManager.NotDetermined;
-            GamePingText.Text = LocalizationManager.NotMeasured;
+            GameServerText.Text = snapshot.Game.ServerText;
+            GameRegionText.Text = snapshot.Game.RegionText;
+            GamePingText.Text = snapshot.Game.PingText;
             
             // Сбрасываем сохраненные IP
             _lastLobbyIp = null;

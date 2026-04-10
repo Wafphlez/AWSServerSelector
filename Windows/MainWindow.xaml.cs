@@ -6,12 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -24,8 +19,11 @@ using System.Windows.Navigation;
 // using System.Windows.Shapes; // Removed to avoid Path ambiguity
 using System.Windows.Threading;
 using System.Runtime.Versioning;
+using AWSServerSelector.Models;
 using AWSServerSelector.Services;
+using AWSServerSelector.Services.Interfaces;
 using AWSServerSelector.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace AWSServerSelector
 {
@@ -73,39 +71,23 @@ namespace AWSServerSelector
         };
 
         private DispatcherTimer? _pingTimer;
-        private Ping? _pinger;
         private ConnectionInfoWindow? _connectionInfoWindow;
-        
-        public enum ApplyMode { Gatekeep, UniversalRedirect }
-        public enum BlockMode { Both, OnlyPing, OnlyService }
+
+        private readonly ISettingsService _settingsService;
+        private readonly IHostsService _hostsService;
+        private readonly ILatencyService _latencyService;
+        private readonly IDialogService _dialogService;
         
         private ApplyMode _applyMode = ApplyMode.Gatekeep;
         private BlockMode _blockMode = BlockMode.Both;
         private bool _mergeUnstable = true;
         private string _currentLanguage = "en";
 
-        // Path for saving user settings
-        private static string SettingsFilePath =>
-            Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "Wafphlez",
-                "PingByDaylight",
-                "settings.json");
-
         // Hosts file section marker and path
         private const string SectionMarker = "# -- Ping by Daylight --";
         private static string HostsPath => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),
             "drivers\\etc\\hosts");
-
-        private class UserSettings
-        {
-            public ApplyMode ApplyMode { get; set; }
-            public BlockMode BlockMode { get; set; }
-            public bool MergeUnstable { get; set; } = true;
-            public string Language { get; set; } = "en";
-        }
-
 
         public ObservableCollection<ServerItem> ServerItems { get; set; } = new();
         public ObservableCollection<ServerGroupItem> ServerGroups { get; set; } = new();
@@ -115,8 +97,17 @@ namespace AWSServerSelector
 
         #region Constructor and Initialization
 
-        public MainWindow()
+        public MainWindow(
+            ISettingsService settingsService,
+            IHostsService hostsService,
+            ILatencyService latencyService,
+            IDialogService dialogService)
         {
+            _settingsService = settingsService;
+            _hostsService = hostsService;
+            _latencyService = latencyService;
+            _dialogService = dialogService;
+
             ViewModel = new MainWindowViewModel(ServerItems, ServerGroups);
             InitializeComponent();
             DataContext = ViewModel;
@@ -133,7 +124,7 @@ namespace AWSServerSelector
             LocalizationManager.PropertyChanged += OnLocalizationPropertyChanged;
         }
 
-        private async void InitializeApplication()
+        private void InitializeApplication()
         {
             InitializeServerList();
             StartPingTimer();
@@ -221,44 +212,18 @@ namespace AWSServerSelector
         {
             try
             {
-                var folder = Path.GetDirectoryName(SettingsFilePath);
-                if (!Directory.Exists(folder))
+                var settings = _settingsService.Load();
+                _applyMode = settings.ApplyMode;
+                _blockMode = settings.BlockMode;
+                _mergeUnstable = settings.MergeUnstable;
+                _currentLanguage = string.IsNullOrWhiteSpace(settings.Language) ? "en" : settings.Language;
+                LocalizationManager.SetLanguage(_currentLanguage);
+
+                System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    // Set default language to English if no settings folder exists
-                    _currentLanguage = "en";
-                    LocalizationManager.SetLanguage(_currentLanguage);
-                    return;
-                }
-                if (!File.Exists(SettingsFilePath))
-                {
-                    // Set default language to English if no settings file exists
-                    _currentLanguage = "en";
-                    LocalizationManager.SetLanguage(_currentLanguage);
-                    return;
-                }
-                var json = File.ReadAllText(SettingsFilePath);
-                var settings = JsonSerializer.Deserialize<UserSettings>(json);
-                if (settings != null)
-                {
-                    _applyMode = settings.ApplyMode;
-                    _blockMode = settings.BlockMode;
-                    _mergeUnstable = settings.MergeUnstable;
-                    _currentLanguage = settings.Language;
-                    LocalizationManager.SetLanguage(_currentLanguage);
-                    
-                    // Force UI update after loading saved language
-                    System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        UpdateUI();
-                        UpdateStaticBindingElements();
-                    }), System.Windows.Threading.DispatcherPriority.Loaded);
-                }
-                else
-                {
-                    // Set default language to English if settings are null
-                    _currentLanguage = "en";
-                    LocalizationManager.SetLanguage(_currentLanguage);
-                }
+                    UpdateUI();
+                    UpdateStaticBindingElements();
+                }), System.Windows.Threading.DispatcherPriority.Loaded);
             }
             catch (Exception ex)
             {
@@ -273,24 +238,14 @@ namespace AWSServerSelector
         {
             try
             {
-                var folder = Path.GetDirectoryName(SettingsFilePath);
-                if (string.IsNullOrEmpty(folder))
-                {
-                    AppLogger.Error("Settings folder path is empty");
-                    return;
-                }
-
-                if (!Directory.Exists(folder))
-                    Directory.CreateDirectory(folder);
-                var settings = new UserSettings
+                var settings = new Models.UserSettings
                 {
                     ApplyMode = _applyMode,
                     BlockMode = _blockMode,
                     MergeUnstable = _mergeUnstable,
                     Language = _currentLanguage,
                 };
-                var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(SettingsFilePath, json);
+                _settingsService.Save(settings);
             }
             catch (Exception ex)
             {
@@ -304,7 +259,6 @@ namespace AWSServerSelector
 
         private void StartPingTimer()
         {
-            _pinger = new Ping();
             _pingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             _pingTimer.Tick += async (_, __) => await UpdatePingResults();
             _pingTimer.Start();
@@ -312,11 +266,6 @@ namespace AWSServerSelector
 
         private async Task UpdatePingResults()
         {
-            if (_pinger == null)
-            {
-                return;
-            }
-
             var results = new Dictionary<string, long>();
             
             foreach (var group in ServerGroups)
@@ -334,8 +283,7 @@ namespace AWSServerSelector
                     try
                     {
                         var hosts = _regions[item.RegionKey].Hosts;
-                        var reply = await _pinger.SendPingAsync(hosts[0], 2000);
-                        ms = reply.Status == IPStatus.Success ? reply.RoundtripTime : -1;
+                        ms = await _latencyService.PingAsync(hosts[0], 2000);
                     }
                     catch
                     {
@@ -382,18 +330,12 @@ namespace AWSServerSelector
         {
             try
             {
-                if (!File.Exists(HostsPath))
-                    return false;
-
-                var hostsContent = File.ReadAllText(HostsPath);
                 var hosts = _regions[regionKey].Hosts;
                 
                 // Проверяем, есть ли записи 0.0.0.0 для всех хостов региона
                 foreach (var host in hosts)
                 {
-                    // Ищем строки вида "0.0.0.0 hostname" (не закомментированные)
-                    var pattern = $"^0\\.0\\.0\\.0\\s+{Regex.Escape(host)}\\s*$";
-                    if (!Regex.IsMatch(hostsContent, pattern, RegexOptions.Multiline | RegexOptions.IgnoreCase))
+                    if (!_hostsService.IsHostBlocked(host))
                     {
                         return false; // Если хотя бы один хост не заблокирован, сервер не отключен
                     }
@@ -410,7 +352,7 @@ namespace AWSServerSelector
 
         #region Event Handlers
 
-        private async void ApplyButton_Click(object sender, RoutedEventArgs e)
+        private void ApplyButton_Click(object sender, RoutedEventArgs e)
         {
             var selectedItems = ServerGroups.SelectMany(g => g.Servers).Where(x => x.IsSelected).ToList();
             
@@ -456,7 +398,7 @@ namespace AWSServerSelector
 
                 try
                 {
-                    File.Copy(HostsPath, HostsPath + ".bak", true);
+                    _hostsService.Backup();
 
                     var sb = new StringBuilder();
                     sb.AppendLine("# Edited by Ping by Daylight");
@@ -520,7 +462,7 @@ namespace AWSServerSelector
 
             try
             {
-                File.Copy(HostsPath, HostsPath + ".bak", true);
+                _hostsService.Backup();
 
                 var selectedRegions = selectedItems.Select(item => item.RegionKey).ToList();
                 bool anyStableSelected = selectedRegions.Any(regionKey => _regions[regionKey].Stable);
@@ -631,7 +573,7 @@ namespace AWSServerSelector
         {
             try
             {
-                File.Copy(HostsPath, HostsPath + ".bak", true);
+                _hostsService.Backup();
                 WriteWrappedHostsSection(string.Empty);
                 FlushDns();
                 MessageBox.Show(
@@ -770,37 +712,15 @@ namespace AWSServerSelector
 
         private void WriteWrappedHostsSection(string innerContent)
         {
-            string original = string.Empty;
-            try { original = File.ReadAllText(HostsPath); } catch (Exception ex) { AppLogger.Error("Failed to read hosts file", ex); }
-
-            try { File.Copy(HostsPath, HostsPath + ".bak", true); } catch (Exception ex) { Debug.WriteLine($"Backup hosts failed: {ex.Message}"); }
+            var original = _hostsService.Read();
+            _hostsService.Backup();
             var updated = HostsSectionBuilder.Build(original, SectionMarker, innerContent);
-            File.WriteAllText(HostsPath, updated);
+            _hostsService.Write(updated);
         }
 
         private void FlushDns()
         {
-            try
-            {
-                var psi = new ProcessStartInfo("ipconfig", "/flushdns")
-                {
-                    CreateNoWindow = true,
-                    UseShellExecute = false
-                };
-                using (var proc = Process.Start(psi))
-                {
-                    if (proc == null)
-                    {
-                        AppLogger.Info("FlushDns failed to start ipconfig process");
-                        return;
-                    }
-                    proc.WaitForExit();
-                }
-            }
-            catch (Exception ex)
-            {
-                AppLogger.Error("FlushDns failed", ex);
-            }
+            _hostsService.FlushDns();
         }
 
         private void OpenUrl(string url)
@@ -996,47 +916,41 @@ namespace AWSServerSelector
 
         private void ShowCheckUpdatesDialog()
         {
-            var updateDialog = new UpdateDialog
-            {
-                Owner = this,
-                StatusText = LocalizationManager.GetString("CheckingUpdates")
-            };
+            var updateDialog = App.Services.GetRequiredService<UpdateDialog>();
+            updateDialog.Owner = this;
+            updateDialog.StatusText = LocalizationManager.GetString("CheckingUpdates");
             
             // Запускаем проверку обновлений в диалоге
             updateDialog.StartUpdateCheck(CurrentVersion);
             
-            updateDialog.ShowDialog();
+            _dialogService.ShowUpdateDialog(updateDialog);
         }
 
         private void ShowAboutDialog()
         {
-            var about = new AboutDialog
-            {
-                Owner = this,
-                Title = LocalizationManager.GetString("AboutTitle"),
-                AboutText = LocalizationManager.GetString("AboutText"),
-                Developer = LocalizationManager.GetString("Developer"),
-                VersionText = LocalizationManager.GetString("Version", CurrentVersion),
-                AwesomeText = LocalizationManager.GetString("Awesome")
-            };
+            var about = App.Services.GetRequiredService<AboutDialog>();
+            about.Owner = this;
+            about.Title = LocalizationManager.GetString("AboutTitle");
+            about.AboutText = LocalizationManager.GetString("AboutText");
+            about.Developer = LocalizationManager.GetString("Developer");
+            about.VersionText = LocalizationManager.GetString("Version", CurrentVersion);
+            about.AwesomeText = LocalizationManager.GetString("Awesome");
             
-            about.ShowDialog();
+            _dialogService.ShowAboutDialog(about);
         }
 
         private void ShowSettingsDialog()
         {
-            var dialog = new SettingsDialog
-            {
-                Owner = this,
-                SelectedLanguage = _currentLanguage,
-                SelectedMode = _applyMode == ApplyMode.UniversalRedirect ? "service" : "hosts",
-                IsBlockBoth = _blockMode == BlockMode.Both,
-                IsBlockPing = _blockMode == BlockMode.OnlyPing,
-                IsBlockService = _blockMode == BlockMode.OnlyService,
-                IsMergeUnstable = _mergeUnstable
-            };
+            var dialog = App.Services.GetRequiredService<SettingsDialog>();
+            dialog.Owner = this;
+            dialog.SelectedLanguage = _currentLanguage;
+            dialog.SelectedMode = _applyMode == ApplyMode.UniversalRedirect ? "service" : "hosts";
+            dialog.IsBlockBoth = _blockMode == BlockMode.Both;
+            dialog.IsBlockPing = _blockMode == BlockMode.OnlyPing;
+            dialog.IsBlockService = _blockMode == BlockMode.OnlyService;
+            dialog.IsMergeUnstable = _mergeUnstable;
             
-            if (dialog.ShowDialog() == true)
+            if (_dialogService.ShowSettingsDialog(dialog) == true)
             {
                 // Check if language changed
                 bool languageChanged = dialog.SelectedLanguage != _currentLanguage;
@@ -1105,7 +1019,7 @@ namespace AWSServerSelector
 
             try
             {
-                try { File.Copy(HostsPath, HostsPath + ".bak", true); } catch (Exception ex) { AppLogger.Error("Restore backup failed", ex); }
+                _hostsService.Backup();
 
                 var defaultHosts =
                     "# Copyright (c) 1993-2009 Microsoft Corp.\r\n" +
@@ -1171,7 +1085,6 @@ namespace AWSServerSelector
         protected override void OnClosed(EventArgs e)
         {
             _pingTimer?.Stop();
-            _pinger?.Dispose();
             LocalizationManager.LanguageChanged -= OnLanguageChanged;
             LocalizationManager.PropertyChanged -= OnLocalizationPropertyChanged;
             base.OnClosed(e);
@@ -1803,7 +1716,7 @@ namespace AWSServerSelector
                 }
 
                 // Создаем новое окно
-                _connectionInfoWindow = new ConnectionInfoWindow();
+                _connectionInfoWindow = App.Services.GetRequiredService<ConnectionInfoWindow>();
 
                 // Позиционируем окно справа от главного окна
                 _connectionInfoWindow.Left = this.Left + this.ActualWidth + 2; // 2px отступ
