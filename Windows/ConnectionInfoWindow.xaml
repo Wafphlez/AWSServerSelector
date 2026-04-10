@@ -15,6 +15,10 @@
         FontFamily="Segoe UI Variable"
         Icon="../Resources/icon.ico"
         Style="{StaticResource CustomWindowStyle}">
+    <Window.Resources>
+        <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource UiThinScrollBar}"/>
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
