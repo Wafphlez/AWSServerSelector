@@ -24,6 +24,7 @@ using AWSServerSelector.Services;
 using AWSServerSelector.Services.Interfaces;
 using AWSServerSelector.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace AWSServerSelector
 {
@@ -32,7 +33,6 @@ namespace AWSServerSelector
     {
         #region Constants and Fields
         
-        private const string DiscordUrl = "https://discord.gg/gnvtATeVc4";
         private static readonly string CurrentVersion =
             typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "1.0.3";
         
@@ -48,6 +48,8 @@ namespace AWSServerSelector
         private readonly IRegionCatalogService _regionCatalogService;
         private readonly IMessageService _messageService;
         private readonly IExternalNavigationService _externalNavigationService;
+        private readonly AppLinksOptions _appLinksOptions;
+        private readonly MonitoringOptions _monitoringOptions;
         
         private ApplyMode _applyMode = ApplyMode.Gatekeep;
         private BlockMode _blockMode = BlockMode.Both;
@@ -75,7 +77,9 @@ namespace AWSServerSelector
             IDialogService dialogService,
             IRegionCatalogService regionCatalogService,
             IMessageService messageService,
-            IExternalNavigationService externalNavigationService)
+            IExternalNavigationService externalNavigationService,
+            IOptions<AppLinksOptions>? appLinksOptions,
+            IOptions<MonitoringOptions>? monitoringOptions)
         {
             _settingsService = settingsService;
             _hostsService = hostsService;
@@ -84,6 +88,8 @@ namespace AWSServerSelector
             _regionCatalogService = regionCatalogService;
             _messageService = messageService;
             _externalNavigationService = externalNavigationService;
+            _appLinksOptions = appLinksOptions?.Value ?? new AppLinksOptions();
+            _monitoringOptions = monitoringOptions?.Value ?? new MonitoringOptions();
             _regions = _regionCatalogService.Regions;
 
             ViewModel = new MainWindowViewModel(
@@ -143,7 +149,7 @@ namespace AWSServerSelector
                 foreach (var kv in group.OrderBy(x => x.Key))
                 {
                     var regionKey = kv.Key;
-                    var translatedName = LocalizationManager.GetServerDisplayName(regionKey);
+                    var translatedName = LocalizationManager.GetServerDisplayName(regionKey, kv.Value.DisplayNameKey);
                     var displayName = translatedName + (kv.Value.Stable ? string.Empty : " ⚠︎");
                     var isDisabled = IsServerDisabledInHosts(regionKey);
                     
@@ -254,7 +260,8 @@ namespace AWSServerSelector
 
         private void StartPingTimer()
         {
-            _pingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            var seconds = Math.Clamp(_monitoringOptions.MainPingIntervalSeconds, 1, 120);
+            _pingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(seconds) };
             _pingTimer.Tick += async (_, __) => await UpdatePingResults();
             _pingTimer.Start();
         }
@@ -278,7 +285,8 @@ namespace AWSServerSelector
                     try
                     {
                         var hosts = _regions[item.RegionKey].Hosts;
-                        ms = await _latencyService.PingAsync(hosts[0], 2000);
+                        var pingTimeout = Math.Clamp(_monitoringOptions.MainPingTimeoutMs, 250, 10000);
+                        ms = await _latencyService.PingAsync(hosts[0], pingTimeout);
                     }
                     catch
                     {
@@ -398,7 +406,7 @@ namespace AWSServerSelector
                     var sb = new StringBuilder();
                     sb.AppendLine("# Edited by Ping by Daylight");
                     sb.AppendLine("# Universal Redirect mode: redirect all GameLift endpoints to selected region");
-                    sb.AppendLine($"# Need help? Discord: {DiscordUrl}");
+                    sb.AppendLine($"# Need help? Discord: {GetDiscordUrl()}");
                     sb.AppendLine();
 
                     string currentGroup = "";
@@ -509,7 +517,7 @@ namespace AWSServerSelector
                 var sb = new StringBuilder();
                 sb.AppendLine("# Edited by Ping by Daylight");
                 sb.AppendLine("# Unselected servers are blocked (Gatekeep Mode); selected servers are commented out.");
-                sb.AppendLine($"# Need help? Discord: {DiscordUrl}");
+                sb.AppendLine($"# Need help? Discord: {GetDiscordUrl()}");
                 sb.AppendLine();
 
                 string currentGroup = "";
@@ -630,6 +638,13 @@ namespace AWSServerSelector
             return _regionCatalogService.GetGroupOrder(groupName);
         }
 
+        private string GetDiscordUrl()
+        {
+            return string.IsNullOrWhiteSpace(_appLinksOptions.DiscordUrl)
+                ? "https://discord.gg/gnvtATeVc4"
+                : _appLinksOptions.DiscordUrl;
+        }
+
         private void UpdateRegionListViewAppearance()
         {
             foreach (var group in ServerGroups)
@@ -639,13 +654,13 @@ namespace AWSServerSelector
                     var regionKey = item.RegionKey;
                     if (_mergeUnstable && !_regions[regionKey].Stable)
                     {
-                        item.DisplayName = LocalizationManager.GetServerDisplayName(regionKey);
+                        item.DisplayName = LocalizationManager.GetServerDisplayName(regionKey, _regions[regionKey].DisplayNameKey);
                         item.TextColor = new SolidColorBrush(Colors.White);
                         item.ToolTipText = string.Empty;
                     }
                     else if (!_regions[regionKey].Stable)
                     {
-                        item.DisplayName = LocalizationManager.GetServerDisplayName(regionKey) + " ⚠︎";
+                        item.DisplayName = LocalizationManager.GetServerDisplayName(regionKey, _regions[regionKey].DisplayNameKey) + " ⚠︎";
                         item.TextColor = new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Warning yellow
                         item.ToolTipText = "Unstable server: latency issues may occur.";
                     }
@@ -844,7 +859,7 @@ namespace AWSServerSelector
             {
                 foreach (var item in group.Servers)
                 {
-                    var translatedName = LocalizationManager.GetServerDisplayName(item.RegionKey);
+                    var translatedName = LocalizationManager.GetServerDisplayName(item.RegionKey, _regions[item.RegionKey].DisplayNameKey);
                     var isUnstable = !_regions[item.RegionKey].Stable;
                     item.DisplayName = translatedName + (isUnstable ? " ⚠︎" : "");
                 }
@@ -958,29 +973,7 @@ namespace AWSServerSelector
             {
                 _hostsService.Backup();
 
-                var defaultHosts =
-                    "# Copyright (c) 1993-2009 Microsoft Corp.\r\n" +
-                    "#\r\n" +
-                    "# This is a sample HOSTS file used by Microsoft TCP/IP for Windows.\r\n" +
-                    "#\r\n" +
-                    "# This file contains the mappings of IP addresses to host names. Each\r\n" +
-                    "# entry should be kept on an individual line. The IP address should\r\n" +
-                    "# be placed in the first column followed by the corresponding host name.\r\n" +
-                    "# The IP address and the host name should be separated by at least one\r\n" +
-                    "# space.\r\n" +
-                    "#\r\n" +
-                    "# Additionally, comments (such as these) may be inserted on individual\r\n" +
-                    "# lines or following the machine name denoted by a '#' symbol.\r\n" +
-                    "#\r\n" +
-                    "# For example:\r\n" +
-                    "#\r\n" +
-                    "#       102.54.94.97     rhino.acme.com          # source server\r\n" +
-                    "#        38.25.63.10     x.acme.com              # x client host\r\n" +
-                    "#\r\n" +
-                    "# localhost name resolution is handled within DNS itself.\r\n" +
-                    "#       127.0.0.1       localhost\r\n" +
-                    "#       ::1             localhost\r\n";
-
+                var defaultHosts = _hostsService.ReadDefaultTemplate();
                 _hostsService.Write(defaultHosts);
                 FlushDns();
 

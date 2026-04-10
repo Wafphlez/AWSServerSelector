@@ -1,0 +1,142 @@
+{
+  "RegionCatalog": {
+    "Regions": [
+      {
+        "key": "Europe (London)",
+        "groupKey": "Europe",
+        "groupDisplayName": "Europe",
+        "hosts": [ "gamelift.eu-west-2.amazonaws.com", "gamelift-ping.eu-west-2.api.aws" ],
+        "stable": false,
+        "displayNameKey": "Europe_London"
+      },
+      {
+        "key": "Europe (Ireland)",
+        "groupKey": "Europe",
+        "groupDisplayName": "Europe",
+        "hosts": [ "gamelift.eu-west-1.amazonaws.com", "gamelift-ping.eu-west-1.api.aws" ],
+        "stable": true,
+        "displayNameKey": "Europe_Ireland"
+      },
+      {
+        "key": "Europe (Frankfurt am Main)",
+        "groupKey": "Europe",
+        "groupDisplayName": "Europe",
+        "hosts": [ "gamelift.eu-central-1.amazonaws.com", "gamelift-ping.eu-central-1.api.aws" ],
+        "stable": true,
+        "displayNameKey": "Europe_Frankfurt"
+      },
+      {
+        "key": "US East (N. Virginia)",
+        "groupKey": "Americas",
+        "groupDisplayName": "The Americas",
+        "hosts": [ "gamelift.us-east-1.amazonaws.com", "gamelift-ping.us-east-1.api.aws" ],
+        "stable": true,
+        "displayNameKey": "US_East_Virginia"
+      },
+      {
+        "key": "US East (Ohio)",
+        "groupKey": "Americas",
+        "groupDisplayName": "The Americas",
+        "hosts": [ "gamelift.us-east-2.amazonaws.com", "gamelift-ping.us-east-2.api.aws" ],
+        "stable": false,
+        "displayNameKey": "US_East_Ohio"
+      },
+      {
+        "key": "US West (N. California)",
+        "groupKey": "Americas",
+        "groupDisplayName": "The Americas",
+        "hosts": [ "gamelift.us-west-1.amazonaws.com", "gamelift-ping.us-west-1.api.aws" ],
+        "stable": true,
+        "displayNameKey": "US_West_California"
+      },
+      {
+        "key": "US West (Oregon)",
+        "groupKey": "Americas",
+        "groupDisplayName": "The Americas",
+        "hosts": [ "gamelift.us-west-2.amazonaws.com", "gamelift-ping.us-west-2.api.aws" ],
+        "stable": true,
+        "displayNameKey": "US_West_Oregon"
+      },
+      {
+        "key": "Canada (Central)",
+        "groupKey": "Americas",
+        "groupDisplayName": "The Americas",
+        "hosts": [ "gamelift.ca-central-1.amazonaws.com", "gamelift-ping.ca-central-1.api.aws" ],
+        "stable": false,
+        "displayNameKey": "Canada_Central"
+      },
+      {
+        "key": "South America (São Paulo)",
+        "groupKey": "Americas",
+        "groupDisplayName": "The Americas",
+        "hosts": [ "gamelift.sa-east-1.amazonaws.com", "gamelift-ping.sa-east-1.api.aws" ],
+        "stable": true,
+        "displayNameKey": "South_America_Sao_Paulo"
+      },
+      {
+        "key": "Asia Pacific (Tokyo)",
+        "groupKey": "Asia",
+        "groupDisplayName": "Asia (excluding Mainland China)",
+        "hosts": [ "gamelift.ap-northeast-1.amazonaws.com", "gamelift-ping.ap-northeast-1.api.aws" ],
+        "stable": true,
+        "displayNameKey": "Asia_Tokyo"
+      },
+      {
+        "key": "Asia Pacific (Seoul)",
+        "groupKey": "Asia",
+        "groupDisplayName": "Asia (excluding Mainland China)",
+        "hosts": [ "gamelift.ap-northeast-2.amazonaws.com", "gamelift-ping.ap-northeast-2.api.aws" ],
+        "stable": true,
+        "displayNameKey": "Asia_Seoul"
+      },
+      {
+        "key": "Asia Pacific (Mumbai)",
+        "groupKey": "Asia",
+        "groupDisplayName": "Asia (excluding Mainland China)",
+        "hosts": [ "gamelift.ap-south-1.amazonaws.com", "gamelift-ping.ap-south-1.api.aws" ],
+        "stable": true,
+        "displayNameKey": "Asia_Mumbai"
+      },
+      {
+        "key": "Asia Pacific (Singapore)",
+        "groupKey": "Asia",
+        "groupDisplayName": "Asia (excluding Mainland China)",
+        "hosts": [ "gamelift.ap-southeast-1.amazonaws.com", "gamelift-ping.ap-southeast-1.api.aws" ],
+        "stable": true,
+        "displayNameKey": "Asia_Singapore"
+      },
+      {
+        "key": "Asia Pacific (Hong Kong)",
+        "groupKey": "Asia",
+        "groupDisplayName": "Asia (excluding Mainland China)",
+        "hosts": [ "ec2.ap-east-1.amazonaws.com", "gamelift-ping.ap-east-1.api.aws" ],
+        "stable": true,
+        "displayNameKey": "Asia_Hong_Kong"
+      },
+      {
+        "key": "Asia Pacific (Sydney)",
+        "groupKey": "Oceania",
+        "groupDisplayName": "Oceania",
+        "hosts": [ "gamelift.ap-southeast-2.amazonaws.com", "gamelift-ping.ap-southeast-2.api.aws" ],
+        "stable": true,
+        "displayNameKey": "Asia_Sydney"
+      },
+      {
+        "key": "China (Beijing)",
+        "groupKey": "China",
+        "groupDisplayName": "Mainland China",
+        "hosts": [ "gamelift.cn-north-1.amazonaws.com.cn" ],
+        "stable": true,
+        "displayNameKey": "China_Beijing"
+      },
+      {
+        "key": "China (Ningxia)",
+        "groupKey": "China",
+        "groupDisplayName": "Mainland China",
+        "hosts": [ "gamelift.cn-northwest-1.amazonaws.com.cn" ],
+        "stable": true,
+        "displayNameKey": "China_Ningxia"
+      }
+    ]
+  }
+}

@@ -134,32 +134,15 @@ namespace AWSServerSelector
             PropertyChanged?.Invoke(null, new PropertyChangedEventArgs(string.Empty));
         }
 
-        public static string GetServerDisplayName(string regionKey)
+        public static string GetServerDisplayName(string regionKey, string? displayNameKey = null)
         {
-            // Map region keys to translation keys
-            var translationKey = regionKey switch
+            if (!string.IsNullOrWhiteSpace(displayNameKey))
             {
-                "Europe (London)" => "Europe_London",
-                "Europe (Ireland)" => "Europe_Ireland", 
-                "Europe (Frankfurt am Main)" => "Europe_Frankfurt",
-                "US East (N. Virginia)" => "US_East_Virginia",
-                "US East (Ohio)" => "US_East_Ohio",
-                "US West (N. California)" => "US_West_California",
-                "US West (Oregon)" => "US_West_Oregon",
-                "Canada (Central)" => "Canada_Central",
-                "South America (São Paulo)" => "South_America_Sao_Paulo",
-                "Asia Pacific (Tokyo)" => "Asia_Tokyo",
-                "Asia Pacific (Seoul)" => "Asia_Seoul",
-                "Asia Pacific (Mumbai)" => "Asia_Mumbai",
-                "Asia Pacific (Singapore)" => "Asia_Singapore",
-                "Asia Pacific (Hong Kong)" => "Asia_Hong_Kong",
-                "Asia Pacific (Sydney)" => "Asia_Sydney",
-                "China (Beijing)" => "China_Beijing",
-                "China (Ningxia)" => "China_Ningxia",
-                _ => null
-            };
+                var localized = GetString(displayNameKey);
+                return localized == displayNameKey ? regionKey : localized;
+            }
 
-            return translationKey != null ? GetString(translationKey) : regionKey;
+            return regionKey;
         }
 
         public static string GetGroupDisplayName(string groupName)

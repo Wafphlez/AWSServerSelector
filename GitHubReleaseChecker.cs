@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using AWSServerSelector.Models;
 using AWSServerSelector.Services;
 
 namespace AWSServerSelector
@@ -44,17 +45,21 @@ namespace AWSServerSelector
 
     public class GitHubReleaseChecker : IDisposable
     {
-        private const string GitHubApiUrl = "https://api.github.com/repos/Wafphlez/AWSServerSelector/releases/latest";
         private readonly HttpClient _httpClient;
         private readonly string _currentVersion;
+        private readonly UpdateOptions _updateOptions;
         public string? LastError { get; private set; }
 
-        public GitHubReleaseChecker(string currentVersion)
+        public GitHubReleaseChecker(string currentVersion, UpdateOptions? updateOptions = null)
         {
             _currentVersion = currentVersion;
+            _updateOptions = updateOptions ?? new UpdateOptions();
             _httpClient = new HttpClient();
-            _httpClient.Timeout = TimeSpan.FromSeconds(15);
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "AWSServerSelector-UpdateChecker/1.0");
+            _httpClient.Timeout = TimeSpan.FromSeconds(Math.Clamp(_updateOptions.TimeoutSeconds, 3, 120));
+            var userAgent = string.IsNullOrWhiteSpace(_updateOptions.UserAgent)
+                ? "AWSServerSelector-UpdateChecker/1.0"
+                : _updateOptions.UserAgent;
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", userAgent);
         }
 
         public async Task<GitHubReleaseInfo?> GetLatestReleaseAsync()
@@ -62,7 +67,10 @@ namespace AWSServerSelector
             try
             {
                 LastError = null;
-                var response = await _httpClient.GetStringAsync(GitHubApiUrl);
+                var apiUrl = string.IsNullOrWhiteSpace(_updateOptions.LatestReleaseApiUrl)
+                    ? "https://api.github.com/repos/Wafphlez/AWSServerSelector/releases/latest"
+                    : _updateOptions.LatestReleaseApiUrl;
+                var response = await _httpClient.GetStringAsync(apiUrl);
                 var release = JsonSerializer.Deserialize<GitHubReleaseInfo>(response);
                 
                 // Отладочная информация

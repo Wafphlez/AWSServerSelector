@@ -3,9 +3,11 @@ using System.Data;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using AWSServerSelector.Models;
 using AWSServerSelector.Services;
 using AWSServerSelector.Services.Interfaces;
 using AWSServerSelector.ViewModels;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AWSServerSelector
@@ -34,6 +36,14 @@ namespace AWSServerSelector
         private static IServiceProvider ConfigureServices()
         {
             var services = new ServiceCollection();
+            var configuration = BuildConfiguration();
+
+            services.AddSingleton<IConfiguration>(configuration);
+            services.Configure<AppLinksOptions>(configuration.GetSection(AppLinksOptions.SectionName));
+            services.Configure<UpdateOptions>(configuration.GetSection(UpdateOptions.SectionName));
+            services.Configure<MonitoringOptions>(configuration.GetSection(MonitoringOptions.SectionName));
+            services.Configure<HostsOptions>(configuration.GetSection(HostsOptions.SectionName));
+            services.Configure<RegionCatalogOptions>(configuration.GetSection(RegionCatalogOptions.SectionName));
 
             services.AddSingleton<ISettingsService, JsonSettingsService>();
             services.AddSingleton<IHostsService, HostsService>();
@@ -57,6 +67,23 @@ namespace AWSServerSelector
             services.AddTransient<ConnectionInfoWindow>();
 
             return services.BuildServiceProvider();
+        }
+
+        private static IConfiguration BuildConfiguration()
+        {
+            try
+            {
+                return new ConfigurationBuilder()
+                    .SetBasePath(AppContext.BaseDirectory)
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                    .AddJsonFile("Config/regions.json", optional: true, reloadOnChange: false)
+                    .Build();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Configuration load failed. Using built-in defaults.", ex);
+                return new ConfigurationBuilder().Build();
+            }
         }
 
         private void OnWindowLoaded(object sender, RoutedEventArgs e)

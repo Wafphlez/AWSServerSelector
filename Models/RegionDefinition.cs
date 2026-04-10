@@ -5,4 +5,5 @@ public sealed record RegionDefinition(
     string GroupKey,
     string GroupDisplayName,
     string[] Hosts,
-    bool Stable);
+    bool Stable,
+    string? DisplayNameKey);

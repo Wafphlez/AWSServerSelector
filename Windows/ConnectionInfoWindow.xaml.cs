@@ -15,8 +15,10 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using System.Management;
 using System.Runtime.Versioning;
+using AWSServerSelector.Models;
 using AWSServerSelector.Services.Interfaces;
 using AWSServerSelector.ViewModels;
+using Microsoft.Extensions.Options;
 
 namespace AWSServerSelector
 {
@@ -27,6 +29,8 @@ namespace AWSServerSelector
         private readonly IConnectionMonitorService _connectionMonitorService;
         private readonly IMessageService _messageService;
         private readonly IClipboardService _clipboardService;
+        private readonly IRegionCatalogService _regionCatalogService;
+        private readonly MonitoringOptions _monitoringOptions;
         #region Fields
 
         private DispatcherTimer? _monitoringTimer;
@@ -49,6 +53,7 @@ namespace AWSServerSelector
         private int _lastLobbyPort;
         private string? _lastGameIp;
         private int _lastGamePort;
+        private readonly Dictionary<string, string[]> _awsRegionToGameLiftHosts;
 
         #endregion
 
@@ -57,11 +62,16 @@ namespace AWSServerSelector
         public ConnectionInfoWindow(
             IConnectionMonitorService connectionMonitorService,
             IMessageService messageService,
-            IClipboardService clipboardService)
+            IClipboardService clipboardService,
+            IRegionCatalogService regionCatalogService,
+            IOptions<MonitoringOptions>? monitoringOptions)
         {
             _connectionMonitorService = connectionMonitorService;
             _messageService = messageService;
             _clipboardService = clipboardService;
+            _regionCatalogService = regionCatalogService;
+            _monitoringOptions = monitoringOptions?.Value ?? new MonitoringOptions();
+            _awsRegionToGameLiftHosts = BuildAwsRegionToHostsMap(_regionCatalogService.Regions.Values);
             InitializeComponent();
             DataContext = _viewModel;
             _viewModel.LastUpdateText = LocalizationManager.Initializing;
@@ -107,7 +117,7 @@ namespace AWSServerSelector
         {
             _monitoringTimer = new DispatcherTimer
             {
-                Interval = TimeSpan.FromSeconds(5)
+                Interval = TimeSpan.FromSeconds(Math.Clamp(_monitoringOptions.ConnectionPollIntervalSeconds, 1, 120))
             };
             _monitoringTimer.Tick += async (s, e) => await MonitorConnectionsAsync();
             _monitoringTimer.Start();
@@ -575,7 +585,8 @@ namespace AWSServerSelector
             {
                 try
                 {
-                    var reply = await _pinger.SendPingAsync(connection.RemoteAddress, 2000);
+                    var pingTimeout = Math.Clamp(_monitoringOptions.ConnectionPingTimeoutMs, 250, 10000);
+                    var reply = await _pinger.SendPingAsync(connection.RemoteAddress, pingTimeout);
                     connection.Ping = reply.Status == IPStatus.Success ? reply.RoundtripTime : -1;
                 }
                 catch
@@ -631,7 +642,7 @@ namespace AWSServerSelector
             try
             {
                 using var httpClient = new System.Net.Http.HttpClient();
-                httpClient.Timeout = TimeSpan.FromSeconds(5);
+                httpClient.Timeout = TimeSpan.FromSeconds(Math.Clamp(_monitoringOptions.IpApiTimeoutSeconds, 2, 30));
                 
                 var response = await httpClient.GetStringAsync($"http://ip-api.com/json/{ip}?fields=status,country,countryCode,regionName,city");
                 
@@ -1195,36 +1206,6 @@ namespace AWSServerSelector
 
         #region Background Ping Monitoring
 
-        // Маппинг AWS регионов на GameLift хосты (точно как на главной странице)
-        // hosts[0] - основной endpoint, hosts[1] - специальный ping endpoint
-        private readonly Dictionary<string, string[]> _awsRegionToGameLiftHosts = new()
-        {
-            // Europe
-            { "eu-west-2", new[]{ "gamelift.eu-west-2.amazonaws.com", "gamelift-ping.eu-west-2.api.aws" } },      // London
-            { "eu-west-1", new[]{ "gamelift.eu-west-1.amazonaws.com", "gamelift-ping.eu-west-1.api.aws" } },      // Ireland
-            { "eu-central-1", new[]{ "gamelift.eu-central-1.amazonaws.com", "gamelift-ping.eu-central-1.api.aws" } }, // Frankfurt
-            
-            // Americas
-            { "us-east-1", new[]{ "gamelift.us-east-1.amazonaws.com", "gamelift-ping.us-east-1.api.aws" } },      // N. Virginia
-            { "us-east-2", new[]{ "gamelift.us-east-2.amazonaws.com", "gamelift-ping.us-east-2.api.aws" } },      // Ohio
-            { "us-west-1", new[]{ "gamelift.us-west-1.amazonaws.com", "gamelift-ping.us-west-1.api.aws" } },      // N. California
-            { "us-west-2", new[]{ "gamelift.us-west-2.amazonaws.com", "gamelift-ping.us-west-2.api.aws" } },      // Oregon
-            { "ca-central-1", new[]{ "gamelift.ca-central-1.amazonaws.com", "gamelift-ping.ca-central-1.api.aws" } }, // Canada
-            { "sa-east-1", new[]{ "gamelift.sa-east-1.amazonaws.com", "gamelift-ping.sa-east-1.api.aws" } },      // São Paulo
-            
-            // Asia Pacific
-            { "ap-northeast-1", new[]{ "gamelift.ap-northeast-1.amazonaws.com", "gamelift-ping.ap-northeast-1.api.aws" } }, // Tokyo
-            { "ap-northeast-2", new[]{ "gamelift.ap-northeast-2.amazonaws.com", "gamelift-ping.ap-northeast-2.api.aws" } }, // Seoul
-            { "ap-south-1", new[]{ "gamelift.ap-south-1.amazonaws.com", "gamelift-ping.ap-south-1.api.aws" } },        // Mumbai
-            { "ap-southeast-1", new[]{ "gamelift.ap-southeast-1.amazonaws.com", "gamelift-ping.ap-southeast-1.api.aws" } }, // Singapore
-            { "ap-east-1", new[]{ "ec2.ap-east-1.amazonaws.com", "gamelift-ping.ap-east-1.api.aws" } },               // Hong Kong
-            { "ap-southeast-2", new[]{ "gamelift.ap-southeast-2.amazonaws.com", "gamelift-ping.ap-southeast-2.api.aws" } }, // Sydney
-            
-            // China
-            { "cn-north-1", new[]{ "gamelift.cn-north-1.amazonaws.com.cn" } },     // Beijing
-            { "cn-northwest-1", new[]{ "gamelift.cn-northwest-1.amazonaws.com.cn" } }, // Ningxia
-        };
-
         /// <summary>
         /// Запускает фоновый мониторинг пинга для игрового сервера
         /// Пингует GameLift хост того же AWS региона (определяет регион через DNS hostname)
@@ -1269,7 +1250,7 @@ namespace AWSServerSelector
             // Создаём DispatcherTimer (работает в UI потоке, гарантирует синхронность)
             _pingTimer = new DispatcherTimer 
             { 
-                Interval = TimeSpan.FromSeconds(1) 
+                Interval = TimeSpan.FromSeconds(Math.Clamp(_monitoringOptions.ConnectionGamePingIntervalSeconds, 1, 10))
             };
             _pingTimer.Tick += async (_, __) => await UpdatePingAsync();
             _pingTimer.Start();
@@ -1377,7 +1358,8 @@ namespace AWSServerSelector
                 Debug.WriteLine($"🏓 Попытка пинга к {_currentGameServerIp}...");
                 
                 // Простой ICMP ping к GameLift хосту (как на главной странице)
-                var reply = await _backgroundPinger.SendPingAsync(_currentGameServerIp, 2000);
+                var pingTimeout = Math.Clamp(_monitoringOptions.ConnectionPingTimeoutMs, 250, 10000);
+                var reply = await _backgroundPinger.SendPingAsync(_currentGameServerIp, pingTimeout);
                 
                 if (reply.Status == IPStatus.Success)
                 {
@@ -1423,6 +1405,43 @@ namespace AWSServerSelector
         private async void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
             await MonitorConnectionsAsync();
+        }
+
+        private static Dictionary<string, string[]> BuildAwsRegionToHostsMap(IEnumerable<RegionDefinition> regions)
+        {
+            var map = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
+            foreach (var region in regions)
+            {
+                foreach (var host in region.Hosts)
+                {
+                    var awsRegion = ExtractAwsRegionCode(host);
+                    if (string.IsNullOrWhiteSpace(awsRegion))
+                    {
+                        continue;
+                    }
+
+                    if (!map.ContainsKey(awsRegion))
+                    {
+                        map[awsRegion] = region.Hosts;
+                    }
+                }
+            }
+
+            return map;
+        }
+
+        private static string? ExtractAwsRegionCode(string host)
+        {
+            var parts = host.Split('.');
+            foreach (var part in parts)
+            {
+                if (System.Text.RegularExpressions.Regex.IsMatch(part, "^[a-z]{2}-[a-z]+-\\d+$"))
+                {
+                    return part;
+                }
+            }
+
+            return null;
         }
 
         private void CopyLobbyIpButton_Click(object sender, RoutedEventArgs e)
