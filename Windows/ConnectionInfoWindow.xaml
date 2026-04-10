@@ -559,7 +559,7 @@
                                           Style="{StaticResource ClearTextBlock}"/>
                             </StackPanel>
                             <TextBlock x:Name="LastUpdateText" 
-                                      Text="{x:Static local:LocalizationManager.Initializing}" 
+                                      Text="{Binding LastUpdateText, FallbackValue={x:Static local:LocalizationManager.Initializing}}" 
                                       Foreground="{StaticResource TextBrush}"
                                       FontWeight="SemiBold"
                                       Style="{StaticResource ClearTextBlock}"/>

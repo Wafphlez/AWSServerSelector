@@ -23,17 +23,22 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 // using System.Windows.Shapes; // Removed to avoid Path ambiguity
 using System.Windows.Threading;
+using System.Runtime.Versioning;
+using AWSServerSelector.Services;
+using AWSServerSelector.ViewModels;
 
 namespace AWSServerSelector
 {
+    [SupportedOSPlatform("windows")]
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         #region Constants and Fields
         
         private const string RepoUrl = "https://github.com/Wafphlez/AWSServerSelector";
         private const string WebsiteUrl = "https://github.com/Wafphlez/AWSServerSelector";
-        private const string DiscordUrl = "https://github.com/Wafphlez/AWSServerSelector";
-        private const string CurrentVersion = "1.0.3";
+        private const string DiscordUrl = "https://discord.gg/gnvtATeVc4";
+        private static readonly string CurrentVersion =
+            typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "1.0.3";
         
         // Holds endpoint list and stability flag for each region
         private record RegionInfo(string[] Hosts, bool Stable);
@@ -104,6 +109,7 @@ namespace AWSServerSelector
 
         public ObservableCollection<ServerItem> ServerItems { get; set; } = new();
         public ObservableCollection<ServerGroupItem> ServerGroups { get; set; } = new();
+        public MainWindowViewModel ViewModel { get; }
 
         #endregion
 
@@ -111,8 +117,9 @@ namespace AWSServerSelector
 
         public MainWindow()
         {
+            ViewModel = new MainWindowViewModel(ServerItems, ServerGroups);
             InitializeComponent();
-            DataContext = this;
+            DataContext = ViewModel;
             LoadSettings();
             
             // Force update UI after loading settings to ensure proper language display
@@ -253,9 +260,10 @@ namespace AWSServerSelector
                     LocalizationManager.SetLanguage(_currentLanguage);
                 }
             }
-            catch
+            catch (Exception ex)
             {
                 // Set default language to English on any error
+                AppLogger.Error("LoadSettings failed", ex);
                 _currentLanguage = "en";
                 LocalizationManager.SetLanguage(_currentLanguage);
             }
@@ -266,6 +274,12 @@ namespace AWSServerSelector
             try
             {
                 var folder = Path.GetDirectoryName(SettingsFilePath);
+                if (string.IsNullOrEmpty(folder))
+                {
+                    AppLogger.Error("Settings folder path is empty");
+                    return;
+                }
+
                 if (!Directory.Exists(folder))
                     Directory.CreateDirectory(folder);
                 var settings = new UserSettings
@@ -278,9 +292,9 @@ namespace AWSServerSelector
                 var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(SettingsFilePath, json);
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore save errors
+                AppLogger.Error("SaveSettings failed", ex);
             }
         }
 
@@ -298,6 +312,11 @@ namespace AWSServerSelector
 
         private async Task UpdatePingResults()
         {
+            if (_pinger == null)
+            {
+                return;
+            }
+
             var results = new Dictionary<string, long>();
             
             foreach (var group in ServerGroups)
@@ -751,39 +770,12 @@ namespace AWSServerSelector
 
         private void WriteWrappedHostsSection(string innerContent)
         {
-            string NormalizeToLf(string s) => s.Replace("\r\n", "\n").Replace("\r", "\n");
-
             string original = string.Empty;
-            try { original = File.ReadAllText(HostsPath); } catch { /* ignore */ }
+            try { original = File.ReadAllText(HostsPath); } catch (Exception ex) { AppLogger.Error("Failed to read hosts file", ex); }
 
-            string lf = NormalizeToLf(original);
-            int first = lf.IndexOf(SectionMarker, StringComparison.Ordinal);
-            int last = first >= 0 ? lf.IndexOf(SectionMarker, first + SectionMarker.Length, StringComparison.Ordinal) : -1;
-
-            string innerLf = NormalizeToLf(innerContent ?? string.Empty);
-            if (innerLf.Length > 0 && !innerLf.EndsWith("\n")) innerLf += "\n";
-            // Убираем лишнюю пустую строку в конце innerLf
-            if (innerLf.EndsWith("\n\n")) innerLf = innerLf.TrimEnd('\n') + "\n";
-            string wrapped = SectionMarker + "\n" + innerLf + SectionMarker;
-
-            string newLf;
-            if (first >= 0 && last >= 0)
-            {
-                int afterLast = last + SectionMarker.Length;
-                newLf = lf.Substring(0, first) + wrapped + lf.Substring(afterLast);
-            }
-            else if (first >= 0 && last < 0)
-            {
-                newLf = lf.Substring(0, first) + wrapped;
-            }
-            else
-            {
-                string suffix = (lf.EndsWith("\n") ? "" : "\n") + "\n" + wrapped;
-                newLf = lf + suffix;
-            }
-
-            try { File.Copy(HostsPath, HostsPath + ".bak", true); } catch { /* ignore */ }
-            try { File.WriteAllText(HostsPath, newLf.Replace("\n", "\r\n")); } catch { throw; }
+            try { File.Copy(HostsPath, HostsPath + ".bak", true); } catch (Exception ex) { Debug.WriteLine($"Backup hosts failed: {ex.Message}"); }
+            var updated = HostsSectionBuilder.Build(original, SectionMarker, innerContent);
+            File.WriteAllText(HostsPath, updated);
         }
 
         private void FlushDns()
@@ -797,10 +789,18 @@ namespace AWSServerSelector
                 };
                 using (var proc = Process.Start(psi))
                 {
+                    if (proc == null)
+                    {
+                        AppLogger.Info("FlushDns failed to start ipconfig process");
+                        return;
+                    }
                     proc.WaitForExit();
                 }
             }
-            catch { /* ignore */ }
+            catch (Exception ex)
+            {
+                AppLogger.Error("FlushDns failed", ex);
+            }
         }
 
         private void OpenUrl(string url)
@@ -1105,7 +1105,7 @@ namespace AWSServerSelector
 
             try
             {
-                try { File.Copy(HostsPath, HostsPath + ".bak", true); } catch { /* ignore backup errors */ }
+                try { File.Copy(HostsPath, HostsPath + ".bak", true); } catch (Exception ex) { AppLogger.Error("Restore backup failed", ex); }
 
                 var defaultHosts =
                     "# Copyright (c) 1993-2009 Microsoft Corp.\r\n" +
@@ -1439,32 +1439,32 @@ namespace AWSServerSelector
             if (mergeCheck != null) mergeCheck.IsChecked = true;
         }
 
-        private ComboBox FindComboBoxInDialog(Window dialog, int index)
+        private ComboBox? FindComboBoxInDialog(Window dialog, int index)
         {
             return FindVisualChildren<ComboBox>(dialog).ElementAtOrDefault(index);
         }
 
-        private RadioButton FindRadioButtonInDialog(Window dialog, int index)
+        private RadioButton? FindRadioButtonInDialog(Window dialog, int index)
         {
             return FindVisualChildren<RadioButton>(dialog).ElementAtOrDefault(index);
         }
 
-        private CheckBox FindCheckBoxInDialog(Window dialog)
+        private CheckBox? FindCheckBoxInDialog(Window dialog)
         {
             return FindVisualChildren<CheckBox>(dialog).FirstOrDefault();
         }
 
-        private ComboBox FindComboBoxInCard(Border card, int index = 0)
+        private ComboBox? FindComboBoxInCard(Border card, int index = 0)
         {
             return FindVisualChildren<ComboBox>(card).ElementAtOrDefault(index);
         }
 
-        private RadioButton FindRadioButtonInCard(Border card, int index)
+        private RadioButton? FindRadioButtonInCard(Border card, int index)
         {
             return FindVisualChildren<RadioButton>(card).ElementAtOrDefault(index);
         }
 
-        private CheckBox FindCheckBoxInCard(Border card)
+        private CheckBox? FindCheckBoxInCard(Border card)
         {
             return FindVisualChildren<CheckBox>(card).FirstOrDefault();
         }

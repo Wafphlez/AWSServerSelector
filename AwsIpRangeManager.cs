@@ -4,7 +4,9 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using AWSServerSelector.Services;
 
 namespace AWSServerSelector
 {
@@ -23,6 +25,10 @@ namespace AWSServerSelector
         private List<AwsIpRange> _ipRanges = new();
         private DateTime _lastUpdate = DateTime.MinValue;
         private readonly TimeSpan _cacheExpiry = TimeSpan.FromHours(24); // Кэш на 24 часа
+        private static readonly JsonSerializerOptions JsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public static AwsIpRangeManager Instance
         {
@@ -120,8 +126,8 @@ namespace AWSServerSelector
                     if (DateTime.Now - cacheInfo.LastWriteTime < _cacheExpiry)
                     {
                         var cachedData = await File.ReadAllTextAsync(CacheFilePath);
-                        var cachedResponse = JsonSerializer.Deserialize<AwsIpRangesResponse>(cachedData);
-                        if (cachedResponse?.Prefixes != null)
+                        var cachedResponse = JsonSerializer.Deserialize<AwsIpRangesResponse>(cachedData, JsonOptions);
+                        if (cachedResponse?.Prefixes is { Count: > 0 })
                         {
                             _ipRanges = cachedResponse.Prefixes;
                             _lastUpdate = cacheInfo.LastWriteTime;
@@ -135,9 +141,9 @@ namespace AWSServerSelector
                 httpClient.Timeout = TimeSpan.FromSeconds(30);
                 
                 var json = await httpClient.GetStringAsync(AwsIpRangesUrl);
-                var response = JsonSerializer.Deserialize<AwsIpRangesResponse>(json);
+                var response = JsonSerializer.Deserialize<AwsIpRangesResponse>(json, JsonOptions);
                 
-                if (response?.Prefixes != null)
+                if (response?.Prefixes is { Count: > 0 })
                 {
                     _ipRanges = response.Prefixes;
                     _lastUpdate = DateTime.Now;
@@ -154,7 +160,7 @@ namespace AWSServerSelector
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Ошибка при загрузке AWS IP диапазонов: {ex.Message}");
+                AppLogger.Error("Ошибка при загрузке AWS IP диапазонов", ex);
                 
                 // Если не удалось загрузить, используем статический список как fallback
                 _ipRanges = GetFallbackIpRanges();
@@ -220,16 +226,28 @@ namespace AWSServerSelector
 
     public class AwsIpRangesResponse
     {
+        [JsonPropertyName("syncToken")]
         public string SyncToken { get; set; } = string.Empty;
-        public DateTime CreateDate { get; set; }
+
+        [JsonPropertyName("createDate")]
+        public string CreateDate { get; set; } = string.Empty;
+
+        [JsonPropertyName("prefixes")]
         public List<AwsIpRange> Prefixes { get; set; } = new();
     }
 
     public class AwsIpRange
     {
+        [JsonPropertyName("ip_prefix")]
         public string IpPrefix { get; set; } = string.Empty;
+
+        [JsonPropertyName("region")]
         public string Region { get; set; } = string.Empty;
+
+        [JsonPropertyName("service")]
         public string Service { get; set; } = string.Empty;
+
+        [JsonPropertyName("network_border_group")]
         public string NetworkBorderGroup { get; set; } = string.Empty;
     }
 }

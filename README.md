@@ -170,8 +170,8 @@
 ### Сборка из исходников
 
 ```bash
-git clone https://github.com/your-username/aws-server-selector.git
-cd aws-server-selector
+git clone https://github.com/Wafphlez/AWSServerSelector.git
+cd AWSServerSelector
 dotnet restore
 dotnet build
 dotnet run --project AWSServerSelector.csproj

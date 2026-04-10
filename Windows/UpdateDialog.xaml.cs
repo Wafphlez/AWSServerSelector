@@ -153,7 +153,9 @@ namespace AWSServerSelector
                             var latestVersionLabel = LocalizationManager.GetString("LatestVersion") ?? "Latest version:";
                             var errorText = LocalizationManager.GetString("UpdateCheckFailed") ?? "Failed to get update information.";
                             LatestVersionText = $"{latestVersionLabel} {errorText}";
-                            StatusText = LocalizationManager.GetString("UpdateCheckFailed");
+                            StatusText = string.IsNullOrWhiteSpace(releaseChecker.LastError)
+                                ? LocalizationManager.GetString("UpdateCheckFailed")
+                                : $"{LocalizationManager.GetString("UpdateCheckFailed")} {releaseChecker.LastError}";
                         }
                     });
                 }

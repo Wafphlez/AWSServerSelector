@@ -5,7 +5,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
-using System.Windows;
+using AWSServerSelector.Services;
 
 namespace AWSServerSelector
 {
@@ -47,11 +47,13 @@ namespace AWSServerSelector
         private const string GitHubApiUrl = "https://api.github.com/repos/Wafphlez/AWSServerSelector/releases/latest";
         private readonly HttpClient _httpClient;
         private readonly string _currentVersion;
+        public string? LastError { get; private set; }
 
         public GitHubReleaseChecker(string currentVersion)
         {
             _currentVersion = currentVersion;
             _httpClient = new HttpClient();
+            _httpClient.Timeout = TimeSpan.FromSeconds(15);
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "AWSServerSelector-UpdateChecker/1.0");
         }
 
@@ -59,6 +61,7 @@ namespace AWSServerSelector
         {
             try
             {
+                LastError = null;
                 var response = await _httpClient.GetStringAsync(GitHubApiUrl);
                 var release = JsonSerializer.Deserialize<GitHubReleaseInfo>(response);
                 
@@ -75,9 +78,8 @@ namespace AWSServerSelector
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"GitHub API Error: {ex.Message}");
-                MessageBox.Show($"Ошибка при получении информации об обновлениях: {ex.Message}", 
-                    "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                AppLogger.Error("GitHub API request failed", ex);
+                LastError = ex.Message;
                 return null;
             }
         }
@@ -95,46 +97,10 @@ namespace AWSServerSelector
             System.Diagnostics.Debug.WriteLine($"  Current: '{_currentVersion}'");
             System.Diagnostics.Debug.WriteLine($"  Latest: '{latestVersion}'");
             
-            var result = CompareVersions(latestVersion, _currentVersion) > 0;
+            var result = VersionComparer.Compare(latestVersion, _currentVersion) > 0;
             System.Diagnostics.Debug.WriteLine($"  Update Available: {result}");
             
             return result;
-        }
-
-        private int CompareVersions(string version1, string version2)
-        {
-            if (string.IsNullOrEmpty(version1) || string.IsNullOrEmpty(version2))
-                return 0;
-
-            var v1Parts = version1.Split('.');
-            var v2Parts = version2.Split('.');
-
-            var maxLength = Math.Max(v1Parts.Length, v2Parts.Length);
-
-            for (int i = 0; i < maxLength; i++)
-            {
-                var v1Part = i < v1Parts.Length ? ParseVersionPart(v1Parts[i]) : 0;
-                var v2Part = i < v2Parts.Length ? ParseVersionPart(v2Parts[i]) : 0;
-
-                if (v1Part > v2Part) return 1;
-                if (v1Part < v2Part) return -1;
-            }
-
-            return 0;
-        }
-
-        private int ParseVersionPart(string part)
-        {
-            if (string.IsNullOrEmpty(part))
-                return 0;
-
-            // Удаляем все нечисловые символы
-            var cleanPart = new string(part.Where(char.IsDigit).ToArray());
-            
-            if (string.IsNullOrEmpty(cleanPart))
-                return 0;
-
-            return int.TryParse(cleanPart, out int result) ? result : 0;
         }
 
         public GitHubAsset? GetDownloadAsset(GitHubReleaseInfo release)

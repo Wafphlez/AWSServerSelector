@@ -14,11 +14,15 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
 using System.Management;
+using System.Runtime.Versioning;
+using AWSServerSelector.ViewModels;
 
 namespace AWSServerSelector
 {
+    [SupportedOSPlatform("windows")]
     public partial class ConnectionInfoWindow : Window, INotifyPropertyChanged
     {
+        private readonly ConnectionInfoViewModel _viewModel = new();
         #region Fields
 
         private DispatcherTimer? _monitoringTimer;
@@ -49,6 +53,8 @@ namespace AWSServerSelector
         public ConnectionInfoWindow()
         {
             InitializeComponent();
+            DataContext = _viewModel;
+            _viewModel.LastUpdateText = LocalizationManager.Initializing;
             Loaded += ConnectionInfoWindow_Loaded;
             Closing += ConnectionInfoWindow_Closing;
             LocalizationManager.LanguageChanged += OnLanguageChanged;
@@ -1158,7 +1164,9 @@ namespace AWSServerSelector
 
         private void UpdateLastUpdateTime()
         {
-            LastUpdateText.Text = $"{DateTime.Now:dd.MM.yyyy HH:mm:ss}";
+            var text = $"{DateTime.Now:dd.MM.yyyy HH:mm:ss}";
+            _viewModel.LastUpdateText = text;
+            LastUpdateText.Text = text;
         }
 
         private SolidColorBrush GetPingColor(long ping)
@@ -1427,15 +1435,15 @@ namespace AWSServerSelector
         private void ShowCopyNotification(string message)
         {
             // Можно добавить всплывающее уведомление, пока просто меняем текст временно
-            var originalText = LastUpdateText.Text;
-            LastUpdateText.Text = message;
+            var originalText = _viewModel.LastUpdateText;
+            _viewModel.LastUpdateText = message;
             LastUpdateText.Foreground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45));
             
             Task.Delay(2000).ContinueWith(_ => 
             {
                 Dispatcher.Invoke(() => 
                 {
-                    LastUpdateText.Text = originalText;
+                    _viewModel.LastUpdateText = originalText;
                     LastUpdateText.Foreground = new SolidColorBrush(Colors.White);
                 });
             });
