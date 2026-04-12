@@ -104,20 +104,16 @@ namespace AWSServerSelector
                 .ValidateOnStart();
 
             services.AddSingleton<ISettingsService, JsonSettingsService>();
-            services.AddSingleton<IHostsService, HostsService>();
+            services.AddSingleton<IHostsFileService, HostsService>();
             services.AddSingleton<IUpdateService, UpdateService>();
-            services.AddSingleton<ILatencyService, LatencyService>();
             services.AddSingleton<IAwsIpRangeService, AwsIpRangeService>();
-            services.AddSingleton<IConnectionMonitorService, ConnectionMonitorService>();
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IRegionCatalogService, RegionCatalogService>();
             services.AddSingleton<IMessageService, MessageService>();
             services.AddSingleton<IExternalNavigationService, ExternalNavigationService>();
             services.AddSingleton<IClipboardService, ClipboardService>();
-            services.AddSingleton<IClock, SystemClock>();
             services.AddSingleton<IDispatcherTimerFactory, DispatcherTimerFactory>();
             services.AddSingleton<INetworkProbeService, NetworkProbeService>();
-            services.AddSingleton<IHostsMutationService, HostsMutationService>();
             services.AddSingleton<IConnectionStatusTextService, ConnectionStatusTextService>();
             services.AddSingleton<IHostsContentBuilder, HostsContentBuilder>();
             services.AddSingleton<ILocalizationService, LocalizationService>();

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace AWSServerSelector.Services;
 
-public sealed class HostsService : IHostsService
+public sealed class HostsService : IHostsFileService
 {
     private readonly HostsOptions _hostsOptions;
     private static string HostsPath => Path.Combine(

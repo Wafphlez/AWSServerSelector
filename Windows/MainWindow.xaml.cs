@@ -40,7 +40,7 @@ namespace AWSServerSelector
         private ConnectionInfoWindow? _connectionInfoWindow;
 
         private readonly ISettingsService _settingsService;
-        private readonly IHostsMutationService _hostsMutationService;
+        private readonly IHostsFileService _hostsFileService;
         private readonly INetworkProbeService _networkProbeService;
         private readonly IDialogService _dialogService;
         private readonly IRegionCatalogService _regionCatalogService;
@@ -73,7 +73,7 @@ namespace AWSServerSelector
 
         public MainWindow(
             ISettingsService settingsService,
-            IHostsMutationService hostsMutationService,
+            IHostsFileService hostsFileService,
             INetworkProbeService networkProbeService,
             IDialogService dialogService,
             IRegionCatalogService regionCatalogService,
@@ -86,7 +86,7 @@ namespace AWSServerSelector
             IOptions<MonitoringOptions> monitoringOptions)
         {
             _settingsService = settingsService;
-            _hostsMutationService = hostsMutationService;
+            _hostsFileService = hostsFileService;
             _networkProbeService = networkProbeService;
             _dialogService = dialogService;
             _regionCatalogService = regionCatalogService;
@@ -332,7 +332,7 @@ namespace AWSServerSelector
                 // Проверяем, есть ли записи 0.0.0.0 для всех хостов региона
                 foreach (var host in hosts)
                 {
-                    if (!_hostsMutationService.IsHostBlocked(host))
+                    if (!_hostsFileService.IsHostBlocked(host))
                     {
                         return false; // Если хотя бы один хост не заблокирован, сервер не отключен
                     }
@@ -488,7 +488,7 @@ namespace AWSServerSelector
         {
             try
             {
-                _hostsMutationService.Backup();
+                _hostsFileService.Backup();
                 WriteWrappedHostsSection(string.Empty);
                 FlushDns();
                 _messageService.Show(
@@ -575,15 +575,15 @@ namespace AWSServerSelector
 
         private void WriteWrappedHostsSection(string innerContent)
         {
-            var original = _hostsMutationService.Read();
-            _hostsMutationService.Backup();
+            var original = _hostsFileService.Read();
+            _hostsFileService.Backup();
             var updated = HostsSectionBuilder.Build(original, SectionMarker, innerContent);
-            _hostsMutationService.Write(updated);
+            _hostsFileService.Write(updated);
         }
 
         private void FlushDns()
         {
-            _hostsMutationService.FlushDns();
+            _hostsFileService.FlushDns();
         }
 
         private void OnLanguageChanged(object? sender, EventArgs e)
@@ -710,10 +710,10 @@ namespace AWSServerSelector
 
             try
             {
-                _hostsMutationService.Backup();
+                _hostsFileService.Backup();
 
-                var defaultHosts = _hostsMutationService.ReadDefaultTemplate();
-                _hostsMutationService.Write(defaultHosts);
+                var defaultHosts = _hostsFileService.ReadDefaultTemplate();
+                _hostsFileService.Write(defaultHosts);
                 FlushDns();
 
                 _messageService.Show(

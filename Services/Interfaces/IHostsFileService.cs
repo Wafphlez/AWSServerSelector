@@ -1,6 +1,6 @@
 namespace AWSServerSelector.Services.Interfaces;
 
-public interface IHostsService
+public interface IHostsFileService
 {
     string Read();
     string ReadDefaultTemplate();
