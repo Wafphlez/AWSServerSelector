@@ -99,29 +99,28 @@ namespace AWSServerSelector
                     }
                 }
 
-                // Ищем подходящее устройство - НЕ loopback, НЕ WAN Miniport
+                // Ищем подходящее устройство.
+                // Важно: отдаем приоритет физическим адаптерам, чтобы не выбирать Hyper-V/VPN.
                 Debug.WriteLine("🔍 Поиск подходящего устройства...");
-                _device = devices
+                var candidates = devices
                     .OfType<ILiveDevice>()
-                    .FirstOrDefault(d => d.Started == false && 
-                                       !d.Name.Contains("Loopback") &&
-                                       !d.Description.Contains("Miniport") &&
-                                       !d.Description.Contains("Pseudo") &&
-                                       (d.Description.Contains("Ethernet") || 
-                                        d.Description.Contains("Wi-Fi") ||
-                                        d.Description.Contains("Wireless") ||
-                                        d.Description.Contains("802.11")));
+                    .Where(d => d.Started == false &&
+                                !d.Name.Contains("Loopback", StringComparison.OrdinalIgnoreCase) &&
+                                !d.Description.Contains("Loopback", StringComparison.OrdinalIgnoreCase))
+                    .OrderByDescending(GetDeviceScore)
+                    .ToList();
+
+                _device = candidates.FirstOrDefault();
+
+                if (_device != null)
+                {
+                    Debug.WriteLine($"   Выбран адаптер со score={GetDeviceScore(_device)}");
+                    Debug.WriteLine($"   Virtual={IsVirtualAdapter(_device.Name, _device.Description)}");
+                }
 
                 if (_device == null)
                 {
-                    Debug.WriteLine("⚠️ Не найдено Ethernet/WiFi устройство, пробуем любое физическое...");
-                    // Берем первое доступное не-loopback, не-miniport устройство
-                    _device = devices
-                        .OfType<ILiveDevice>()
-                        .FirstOrDefault(d => d.Started == false && 
-                                           !d.Name.Contains("Loopback") &&
-                                           !d.Description.Contains("Miniport") &&
-                                           !d.Description.Contains("Pseudo"));
+                    Debug.WriteLine("⚠️ Не удалось выбрать адаптер для захвата UDP");
                 }
 
                 if (_device == null)
@@ -308,6 +307,52 @@ namespace AWSServerSelector
             }
 
             return false;
+        }
+
+        private static int GetDeviceScore(ILiveDevice device)
+        {
+            var score = 0;
+            var desc = device.Description ?? string.Empty;
+            var name = device.Name ?? string.Empty;
+
+            if (desc.Contains("Ethernet", StringComparison.OrdinalIgnoreCase) ||
+                desc.Contains("Wi-Fi", StringComparison.OrdinalIgnoreCase) ||
+                desc.Contains("Wireless", StringComparison.OrdinalIgnoreCase) ||
+                desc.Contains("802.11", StringComparison.OrdinalIgnoreCase))
+            {
+                score += 40;
+            }
+
+            if (!IsVirtualAdapter(name, desc))
+            {
+                score += 30;
+            }
+            else
+            {
+                score -= 40;
+            }
+
+            if (name.Contains("\\Device\\NPF_", StringComparison.OrdinalIgnoreCase))
+            {
+                score += 10;
+            }
+
+            return score;
+        }
+
+        private static bool IsVirtualAdapter(string name, string description)
+        {
+            var value = $"{name} {description}";
+            return value.Contains("Hyper-V", StringComparison.OrdinalIgnoreCase) ||
+                   value.Contains("vEthernet", StringComparison.OrdinalIgnoreCase) ||
+                   value.Contains("VMware", StringComparison.OrdinalIgnoreCase) ||
+                   value.Contains("VirtualBox", StringComparison.OrdinalIgnoreCase) ||
+                   value.Contains("Wintun", StringComparison.OrdinalIgnoreCase) ||
+                   value.Contains("WireGuard", StringComparison.OrdinalIgnoreCase) ||
+                   value.Contains("TAP", StringComparison.OrdinalIgnoreCase) ||
+                   value.Contains("VPN", StringComparison.OrdinalIgnoreCase) ||
+                   value.Contains("Miniport", StringComparison.OrdinalIgnoreCase) ||
+                   value.Contains("Pseudo", StringComparison.OrdinalIgnoreCase);
         }
 
         public void StopCapture()

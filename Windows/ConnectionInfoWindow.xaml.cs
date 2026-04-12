@@ -54,6 +54,7 @@ namespace AWSServerSelector
         private string? _lastGameIp;
         private int _lastGamePort;
         private readonly Dictionary<string, string[]> _awsRegionToGameLiftHosts;
+        private NpcapRuntimeStatus _npcapRuntimeStatus = NpcapRuntimeStatus.Unknown;
 
         #endregion
 
@@ -166,12 +167,14 @@ namespace AWSServerSelector
                 {
                     _udpMonitorStarted = true;
                     _monitoredUdpPorts = dbdPorts;
+                    _npcapRuntimeStatus = NpcapRuntimeStatus.Working;
                     Debug.WriteLine("========================================");
                     Debug.WriteLine("✅✅✅ UDP монитор успешно запущен! ✅✅✅");
                     Debug.WriteLine("========================================");
                 }
                 else
                 {
+                    _npcapRuntimeStatus = NpcapRuntimeStatus.NotWorking;
                     Debug.WriteLine("========================================");
                     Debug.WriteLine("❌ НЕ УДАЛОСЬ ЗАПУСТИТЬ UDP МОНИТОР");
                     Debug.WriteLine("========================================");
@@ -202,6 +205,7 @@ namespace AWSServerSelector
             }
             catch (Exception ex)
             {
+                _npcapRuntimeStatus = NpcapRuntimeStatus.NotWorking;
                 Debug.WriteLine("========================================");
                 Debug.WriteLine($"❌ КРИТИЧЕСКАЯ ОШИБКА UDP МОНИТОРА");
                 Debug.WriteLine("========================================");
@@ -1075,7 +1079,7 @@ namespace AWSServerSelector
             // Обновляем UDP (игра)
             if (udpConnection != null)
             {
-                _viewModel.GameStatusText = LocalizationManager.Connected;
+                _viewModel.GameStatusText = BuildGameStatusText(LocalizationManager.Connected);
                 _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45));
 
                 _viewModel.GameIpText = $"{udpConnection.RemoteAddress}:{udpConnection.RemotePort}";
@@ -1127,9 +1131,19 @@ namespace AWSServerSelector
             {
                 // Нет UDP соединения - сбрасываем статус игры
                 Debug.WriteLine("⚠️ UDP соединение не найдено - сбрасываем статус игры");
-                
-                _viewModel.GameStatusText = LocalizationManager.NotConnected;
-                _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C));
+
+                if (_udpMonitorStarted && _npcapRuntimeStatus == NpcapRuntimeStatus.Working)
+                {
+                    // Npcap работает, но сервер матча еще не пойман.
+                    // Не показываем это как ошибку подключения.
+                    _viewModel.GameStatusText = BuildGameStatusText(LocalizationManager.Measuring);
+                    _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07));
+                }
+                else
+                {
+                    _viewModel.GameStatusText = BuildGameStatusText(LocalizationManager.NotConnected);
+                    _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C));
+                }
 
                 _viewModel.GameIpText = LocalizationManager.NotDetermined;
                 _viewModel.GameCopyVisibility = Visibility.Collapsed;
@@ -1162,7 +1176,7 @@ namespace AWSServerSelector
             _viewModel.LobbyPingText = snapshot.Lobby.PingText;
             _viewModel.LobbyPingForeground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
 
-            _viewModel.GameStatusText = LocalizationManager.GameNotRunning;
+            _viewModel.GameStatusText = BuildGameStatusText(LocalizationManager.GameNotRunning);
             _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
             _viewModel.GameIpText = snapshot.Game.IpText;
             _viewModel.GameCopyVisibility = Visibility.Collapsed;
@@ -1199,6 +1213,21 @@ namespace AWSServerSelector
             if (ping < 130) return new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Yellow
             if (ping < 250) return new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C)); // Red
             return new SolidColorBrush(Color.FromRgb(0x6F, 0x42, 0xC1)); // Purple
+        }
+
+        private string BuildGameStatusText(string baseStatus)
+        {
+            return $"{baseStatus} ({GetNpcapStatusText()})";
+        }
+
+        private string GetNpcapStatusText()
+        {
+            return _npcapRuntimeStatus switch
+            {
+                NpcapRuntimeStatus.Working => "Npcap: OK",
+                NpcapRuntimeStatus.NotWorking => "Npcap: unavailable",
+                _ => "Npcap: unknown"
+            };
         }
 
         #endregion
@@ -1497,6 +1526,13 @@ namespace AWSServerSelector
         #endregion
 
         #region Helper Classes
+
+        private enum NpcapRuntimeStatus
+        {
+            Unknown,
+            Working,
+            NotWorking
+        }
 
         private class ConnectionInfo
         {
