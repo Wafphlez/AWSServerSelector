@@ -9,7 +9,7 @@
 
 **Клиент для управления регионами AWS/GameLift в Dead by Daylight**
 
-[🚀 Скачать](https://github.com/Wafphlez/AWSServerSelector/releases) • [🐛 Сообщить об ошибке](https://github.com/Wafphlez/AWSServerSelector/issues/new/choose) • [💬 Discord](https://discord.gg/gnvtATeVc4)
+[🚀 Скачать](https://github.com/Wafphlez/AWSServerSelector/releases) • [🐛 Сообщить об ошибке](https://github.com/Wafphlez/AWSServerSelector/issues/new/choose)
 
 </div>
 
@@ -66,7 +66,7 @@
 # -- Ping by Daylight --
 # Edited by Ping by Daylight
 # Unselected servers are blocked (Gatekeep Mode); selected servers are commented out.
-# Need help? Discord: https://discord.gg/gnvtATeVc4
+# Need help? Issues: https://github.com/Wafphlez/AWSServerSelector/issues
 
 # Europe
 # gamelift.eu-west-1.amazonaws.com
@@ -141,7 +141,6 @@ MIT - подробнее в файле [LICENSE](LICENSE).
 
 - Issues: [https://github.com/Wafphlez/AWSServerSelector/issues](https://github.com/Wafphlez/AWSServerSelector/issues)
 - Releases: [https://github.com/Wafphlez/AWSServerSelector/releases](https://github.com/Wafphlez/AWSServerSelector/releases)
-- Discord: [https://discord.gg/gnvtATeVc4](https://discord.gg/gnvtATeVc4)
 
 ## 🙏 Благодарности
 
