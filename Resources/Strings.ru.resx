@@ -346,6 +346,15 @@
   <data name="MatchCopied" xml:space="preserve">
     <value>IP матча скопирован в буфер обмена</value>
   </data>
+  <data name="SettingsApplied" xml:space="preserve">
+    <value>Настройки применены.</value>
+  </data>
+  <data name="HostsApplied" xml:space="preserve">
+    <value>Файл hosts обновлен. Перезапустите игру для применения изменений.</value>
+  </data>
+  <data name="HostsReverted" xml:space="preserve">
+    <value>Записи AWS в hosts очищены.</value>
+  </data>
   <data name="NpcapStatusOk" xml:space="preserve">
     <value>Npcap: работает</value>
   </data>

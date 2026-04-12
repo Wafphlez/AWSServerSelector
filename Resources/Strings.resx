@@ -346,6 +346,15 @@
   <data name="MatchCopied" xml:space="preserve">
     <value>Match IP copied to clipboard</value>
   </data>
+  <data name="SettingsApplied" xml:space="preserve">
+    <value>Settings applied.</value>
+  </data>
+  <data name="HostsApplied" xml:space="preserve">
+    <value>Hosts file updated. Restart the game to apply changes.</value>
+  </data>
+  <data name="HostsReverted" xml:space="preserve">
+    <value>AWS hosts entries were cleared.</value>
+  </data>
   <data name="NpcapStatusOk" xml:space="preserve">
     <value>Npcap: OK</value>
   </data>

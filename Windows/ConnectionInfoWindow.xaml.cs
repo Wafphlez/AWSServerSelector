@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
@@ -25,13 +26,15 @@ namespace AWSServerSelector
     public partial class ConnectionInfoWindow : Window, INotifyPropertyChanged
     {
         private readonly ConnectionInfoViewModel _viewModel = new();
-        private readonly IMessageService _messageService;
+        private readonly INotificationService _notificationService;
         private readonly IClipboardService _clipboardService;
         private readonly IRegionCatalogService _regionCatalogService;
         private readonly INetworkProbeService _networkProbeService;
         private readonly IDispatcherTimerFactory _dispatcherTimerFactory;
         private readonly IConnectionStatusTextService _connectionStatusTextService;
         private readonly MonitoringOptions _monitoringOptions;
+        private const string ConnectionNotificationsChannel = "connection";
+        public ReadOnlyObservableCollection<NotificationItem> ToastNotifications { get; }
         #region Fields
 
         private DispatcherTimer? _monitoringTimer;
@@ -60,7 +63,7 @@ namespace AWSServerSelector
         #region Constructor
 
         public ConnectionInfoWindow(
-            IMessageService messageService,
+            INotificationService notificationService,
             IClipboardService clipboardService,
             IRegionCatalogService regionCatalogService,
             INetworkProbeService networkProbeService,
@@ -68,7 +71,7 @@ namespace AWSServerSelector
             IConnectionStatusTextService connectionStatusTextService,
             IOptions<MonitoringOptions> monitoringOptions)
         {
-            _messageService = messageService;
+            _notificationService = notificationService;
             _clipboardService = clipboardService;
             _regionCatalogService = regionCatalogService;
             _networkProbeService = networkProbeService;
@@ -76,6 +79,7 @@ namespace AWSServerSelector
             _connectionStatusTextService = connectionStatusTextService;
             _monitoringOptions = monitoringOptions.Value;
             _awsRegionToGameLiftHosts = BuildAwsRegionToHostsMap(_regionCatalogService.Regions.Values);
+            ToastNotifications = _notificationService.GetNotifications(ConnectionNotificationsChannel);
             InitializeComponent();
             DataContext = _viewModel;
             _viewModel.LastUpdateText = LocalizationManager.Initializing;
@@ -186,20 +190,11 @@ namespace AWSServerSelector
                     Debug.WriteLine("⚠️ TCP мониторинг (лобби) будет работать нормально!");
                     Debug.WriteLine("⚠️ UDP мониторинг (матч) недоступен");
                     
-                    // Показываем сообщение пользователю
                     Dispatcher.Invoke(() =>
                     {
-                        _messageService.Show(
-                            "UDP мониторинг недоступен.\n\n" +
-                            "Будет работать только отображение TCP соединений (лобби).\n\n" +
-                            "Для мониторинга UDP (матча) убедитесь что:\n" +
-                            "• Npcap установлен с опцией 'WinPcap API-compatible Mode'\n" +
-                            "• Закройте Wireshark или другие программы перехвата пакетов\n" +
-                            "• Попробуйте переустановить Npcap\n\n" +
-                            "Приложение продолжит работу без UDP мониторинга.",
-                            "UDP мониторинг недоступен",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Information);
+                        _notificationService.ShowWarning(
+                            ConnectionNotificationsChannel,
+                            "UDP мониторинг недоступен. Будет работать только TCP (лобби). Проверьте установку Npcap в режиме WinPcap API-compatible.");
                     });
                 }
             }

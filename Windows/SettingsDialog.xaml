@@ -545,5 +545,12 @@
                                          PrimaryClick="ApplyButton_Click"
                                          SecondaryButtonWidth="160"
                                          PrimaryButtonWidth="140"/>
+
+        <controls:ToastHostControl Grid.RowSpan="2"
+                                   Panel.ZIndex="100"
+                                   HostMargin="0,0,0,68"
+                                   ToastMinWidth="400"
+                                   ToastMaxWidth="500"
+                                   ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ToastNotifications}"/>
     </Grid>
 </Window>

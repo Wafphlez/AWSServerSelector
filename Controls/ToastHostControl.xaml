@@ -1,0 +1,127 @@
+<UserControl x:Class="AWSServerSelector.Controls.ToastHostControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:models="clr-namespace:AWSServerSelector.Models"
+             x:Name="Root"
+             IsHitTestVisible="False">
+    <ItemsControl ItemsSource="{Binding ItemsSource, ElementName=Root}"
+                  Margin="{Binding HostMargin, ElementName=Root}"
+                  HorizontalAlignment="Center"
+                  VerticalAlignment="Bottom">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <StackPanel Orientation="Vertical"/>
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type models:NotificationItem}">
+                <Border Margin="0,0,0,10"
+                        Padding="16,12"
+                        CornerRadius="12"
+                        BorderThickness="1"
+                        MinWidth="{Binding ToastMinWidth, ElementName=Root}"
+                        MaxWidth="{Binding ToastMaxWidth, ElementName=Root}"
+                        Background="#F21A232E"
+                        BorderBrush="#FF2E3B49">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="16"
+                                          ShadowDepth="2"
+                                          Opacity="0.35"
+                                          Color="#AA000000"/>
+                    </Border.Effect>
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="#F21A232E"/>
+                            <Setter Property="BorderBrush" Value="#FF2E3B49"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Type}" Value="{x:Static models:NotificationType.Warning}">
+                                    <Setter Property="Background" Value="#F2272B24"/>
+                                    <Setter Property="BorderBrush" Value="#FF4B4630"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Type}" Value="{x:Static models:NotificationType.Error}">
+                                    <Setter Property="Background" Value="#F22B2127"/>
+                                    <Setter Property="BorderBrush" Value="#FF4C2E3A"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0"
+                                Width="36"
+                                Height="36"
+                                CornerRadius="18"
+                                VerticalAlignment="Top"
+                                BorderThickness="1">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#1B2D28"/>
+                                    <Setter Property="BorderBrush" Value="#2B5D45"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Type}" Value="{x:Static models:NotificationType.Warning}">
+                                            <Setter Property="Background" Value="#2C2C22"/>
+                                            <Setter Property="BorderBrush" Value="#5A5B33"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Type}" Value="{x:Static models:NotificationType.Error}">
+                                            <Setter Property="Background" Value="#2D1F26"/>
+                                            <Setter Property="BorderBrush" Value="#6A2D43"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       FontSize="18"
+                                       FontWeight="Bold">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#2EE38A"/>
+                                        <Setter Property="Text" Value="✓"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Type}" Value="{x:Static models:NotificationType.Warning}">
+                                                <Setter Property="Foreground" Value="#FFD23A"/>
+                                                <Setter Property="Text" Value="!"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Type}" Value="{x:Static models:NotificationType.Error}">
+                                                <Setter Property="Foreground" Value="#FF4D6D"/>
+                                                <Setter Property="Text" Value="✕"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock FontSize="16"
+                                       FontWeight="Bold"
+                                       Foreground="White">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="Успешно"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Type}" Value="{x:Static models:NotificationType.Warning}">
+                                                <Setter Property="Text" Value="Внимание"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Type}" Value="{x:Static models:NotificationType.Error}">
+                                                <Setter Property="Text" Value="Ошибка"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Text="{Binding Message}"
+                                       Margin="0,2,0,0"
+                                       Foreground="#FFD0D7E0"
+                                       FontSize="13"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

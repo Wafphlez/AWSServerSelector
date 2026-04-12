@@ -44,14 +44,16 @@ namespace AWSServerSelector
         private readonly INetworkProbeService _networkProbeService;
         private readonly IDialogService _dialogService;
         private readonly IRegionCatalogService _regionCatalogService;
-        private readonly IMessageService _messageService;
         private readonly IExternalNavigationService _externalNavigationService;
         private readonly IDispatcherTimerFactory _dispatcherTimerFactory;
+        private readonly INotificationService _notificationService;
         private readonly IHostsContentBuilder _hostsContentBuilder;
         private readonly ILocalizationService _localizationService;
         private readonly AppLinksOptions _appLinksOptions;
         private readonly MonitoringOptions _monitoringOptions;
         
+        private const string MainNotificationsChannel = "main";
+
         private ApplyMode _applyMode = ApplyMode.Gatekeep;
         private BlockMode _blockMode = BlockMode.Both;
         private bool _mergeUnstable = true;
@@ -65,6 +67,7 @@ namespace AWSServerSelector
 
         public ObservableCollection<ServerItem> ServerItems { get; set; } = new();
         public ObservableCollection<ServerGroupItem> ServerGroups { get; set; } = new();
+        public ReadOnlyObservableCollection<NotificationItem> ToastNotifications { get; }
         public MainWindowViewModel ViewModel { get; }
 
         #endregion
@@ -77,9 +80,9 @@ namespace AWSServerSelector
             INetworkProbeService networkProbeService,
             IDialogService dialogService,
             IRegionCatalogService regionCatalogService,
-            IMessageService messageService,
             IExternalNavigationService externalNavigationService,
             IDispatcherTimerFactory dispatcherTimerFactory,
+            INotificationService notificationService,
             IHostsContentBuilder hostsContentBuilder,
             ILocalizationService localizationService,
             IOptions<AppLinksOptions> appLinksOptions,
@@ -90,14 +93,15 @@ namespace AWSServerSelector
             _networkProbeService = networkProbeService;
             _dialogService = dialogService;
             _regionCatalogService = regionCatalogService;
-            _messageService = messageService;
             _externalNavigationService = externalNavigationService;
             _dispatcherTimerFactory = dispatcherTimerFactory;
+            _notificationService = notificationService;
             _hostsContentBuilder = hostsContentBuilder;
             _localizationService = localizationService;
             _appLinksOptions = appLinksOptions.Value;
             _monitoringOptions = monitoringOptions.Value;
             _regions = _regionCatalogService.Regions;
+            ToastNotifications = _notificationService.GetNotifications(MainNotificationsChannel);
 
             ViewModel = new MainWindowViewModel(
                 ServerItems,
@@ -358,11 +362,7 @@ namespace AWSServerSelector
             {
                 if (selectedItems.Count != 1)
                 {
-                    _messageService.Show(
-                        "Пожалуйста, выберите только один сервер при использовании режима Universal Redirect.",
-                        "Universal Redirect",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    ShowWarningToast("Пожалуйста, выберите только один сервер при использовании режима Universal Redirect.");
                     return;
                 }
 
@@ -385,11 +385,7 @@ namespace AWSServerSelector
                 }
                 catch (Exception ex)
                 {
-                    _messageService.Show(
-                        "Не удалось разрешить IP-адреса для режима Universal Redirect через DNS:\n" + ex.Message,
-                        "Ошибка Universal Redirect",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                    ShowErrorToast("Не удалось разрешить IP-адреса для режима Universal Redirect через DNS:\n" + ex.Message);
                     return;
                 }
 
@@ -404,23 +400,17 @@ namespace AWSServerSelector
                         GetGroupDisplayName);
                     WriteWrappedHostsSection(buildResult.Content);
                     FlushDns();
-                    _messageService.Show(
-                        "Файл hosts был успешно обновлен (Universal Redirect).\n\nПожалуйста, перезапустите игру, чтобы изменения вступили в силу.",
-                        "Успех",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Information);
+                    _notificationService.ShowSuccess(
+                        MainNotificationsChannel,
+                        _localizationService.GetString("HostsApplied"));
                 }
                 catch (UnauthorizedAccessException)
                 {
-                    _messageService.Show(
-                        "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
-                        "Доступ запрещен",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning);
+                    ShowWarningToast("Пожалуйста, запустите программу от имени администратора для изменения файла hosts.");
                 }
                 catch (Exception ex)
                 {
-                    _messageService.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                    ShowErrorToast(ex.Message);
                 }
                 return;
             }
@@ -428,11 +418,7 @@ namespace AWSServerSelector
             // Gatekeep mode
             if (selectedItems.Count == 0)
             {
-                _messageService.Show(
-                    "Пожалуйста, выберите хотя бы один сервер для разрешения.",
-                    "Сервер не выбран",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                ShowWarningToast("Пожалуйста, выберите хотя бы один сервер для разрешения.");
                 return;
             }
 
@@ -454,33 +440,23 @@ namespace AWSServerSelector
                     GetGroupDisplayName);
                 if (!buildResult.Success)
                 {
-                    _messageService.Show(
-                        buildResult.ErrorMessage ?? "Не удалось подготовить hosts-контент.",
-                        "Стабильные серверы не найдены",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error);
+                    ShowErrorToast(buildResult.ErrorMessage ?? "Не удалось подготовить hosts-контент.");
                     return;
                 }
 
                 WriteWrappedHostsSection(buildResult.Content);
                 FlushDns();
-                _messageService.Show(
-                    "Файл hosts был успешно обновлен (Gatekeep).\n\nПожалуйста, перезапустите игру, чтобы изменения вступили в силу.",
-                    "Успех",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                _notificationService.ShowSuccess(
+                    MainNotificationsChannel,
+                    _localizationService.GetString("HostsApplied"));
             }
             catch (UnauthorizedAccessException)
             {
-                _messageService.Show(
-                    "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
-                    "Доступ запрещен",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                ShowWarningToast("Пожалуйста, запустите программу от имени администратора для изменения файла hosts.");
             }
             catch (Exception ex)
             {
-                _messageService.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowErrorToast(ex.Message);
             }
         }
 
@@ -491,23 +467,17 @@ namespace AWSServerSelector
                 _hostsFileService.Backup();
                 WriteWrappedHostsSection(string.Empty);
                 FlushDns();
-                _messageService.Show(
-                    "Записи AWS Realms очищены. Ваши существующие строки hosts остались нетронутыми.",
-                    "Отменено",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                _notificationService.ShowSuccess(
+                    MainNotificationsChannel,
+                    _localizationService.GetString("HostsReverted"));
             }
             catch (UnauthorizedAccessException)
             {
-                _messageService.Show(
-                    "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
-                    "Доступ запрещен",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                ShowWarningToast("Пожалуйста, запустите программу от имени администратора для изменения файла hosts.");
             }
             catch (Exception ex)
             {
-                _messageService.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                ShowErrorToast(ex.Message);
             }
         }
 
@@ -648,91 +618,62 @@ namespace AWSServerSelector
                 _blockMode == BlockMode.OnlyPing,
                 _blockMode == BlockMode.OnlyService,
                 _mergeUnstable);
-            
-            if (_dialogService.ShowSettingsDialog(dialog) == true)
+
+            dialog.ApplyRequested += ApplySettingsResult;
+            try
             {
-                var result = dialog.ViewModel.CreateResult();
-                // Check if language changed
-                bool languageChanged = result.selectedLanguage != _currentLanguage;
-                
-                // Check if mode changed
-                bool modeChanged = result.applyMode != _applyMode;
-                bool blockModeChanged = result.blockMode != _blockMode;
-                
-                // Check if merge unstable changed
-                bool mergeUnstableChanged = result.mergeUnstable != _mergeUnstable;
-                
-                // Apply changes
-                if (languageChanged)
-                {
-                    _currentLanguage = result.selectedLanguage;
-                    _localizationService.SetLanguageAndNotify(_currentLanguage);
-                }
-                
-                if (modeChanged)
-                {
-                    _applyMode = result.applyMode;
-                    OnPropertyChanged(nameof(ApplyMode));
-                }
-                
-                if (blockModeChanged)
-                {
-                    _blockMode = result.blockMode;
-                    OnPropertyChanged(nameof(BlockMode));
-                }
-                
-                if (mergeUnstableChanged)
-                {
-                    _mergeUnstable = result.mergeUnstable;
-                    OnPropertyChanged(nameof(_mergeUnstable));
-                }
-                
-                // Save settings
-                SaveSettings();
-                ViewModel.NotifyLocalizationChanged();
-                UpdateRegionListViewAppearance();
-                if (languageChanged)
-                {
-                    UpdateServerNames();
-                }
+                _dialogService.ShowSettingsDialog(dialog);
+            }
+            finally
+            {
+                dialog.ApplyRequested -= ApplySettingsResult;
             }
         }
 
-        private void RestoreWindowsDefaultHostsFile()
+        private void ApplySettingsResult((string selectedLanguage, ApplyMode applyMode, BlockMode blockMode, bool mergeUnstable) result)
         {
-            var confirm = _messageService.Show(
-                "Если у вас возникли проблемы или программа не работает корректно, попробуйте сбросить файл hosts.\n\nЭто перезапишет весь ваш файл hosts значениями по умолчанию Windows.\n\nРезервная копия будет сохранена как hosts.bak. Продолжить?",
-                "Восстановить файл hosts по умолчанию Windows",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-            if (confirm != MessageBoxResult.Yes)
-                return;
+            // Check if language changed
+            bool languageChanged = result.selectedLanguage != _currentLanguage;
 
-            try
+            // Check if mode changed
+            bool modeChanged = result.applyMode != _applyMode;
+            bool blockModeChanged = result.blockMode != _blockMode;
+
+            // Check if merge unstable changed
+            bool mergeUnstableChanged = result.mergeUnstable != _mergeUnstable;
+
+            // Apply changes
+            if (languageChanged)
             {
-                _hostsFileService.Backup();
-
-                var defaultHosts = _hostsFileService.ReadDefaultTemplate();
-                _hostsFileService.Write(defaultHosts);
-                FlushDns();
-
-                _messageService.Show(
-                    "Файл hosts восстановлен до шаблона по умолчанию Windows.",
-                    "Успех",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                _currentLanguage = result.selectedLanguage;
+                _localizationService.SetLanguageAndNotify(_currentLanguage);
             }
-            catch (UnauthorizedAccessException)
+
+            if (modeChanged)
             {
-                _messageService.Show(
-                    "Пожалуйста, запустите программу от имени администратора для изменения файла hosts.",
-                    "Доступ запрещен",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                _applyMode = result.applyMode;
+                OnPropertyChanged(nameof(ApplyMode));
             }
-            catch (Exception ex)
+
+            if (blockModeChanged)
             {
-                _messageService.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                _blockMode = result.blockMode;
+                OnPropertyChanged(nameof(BlockMode));
+            }
+
+            if (mergeUnstableChanged)
+            {
+                _mergeUnstable = result.mergeUnstable;
+                OnPropertyChanged(nameof(_mergeUnstable));
+            }
+
+            // Save settings
+            SaveSettings();
+            ViewModel.NotifyLocalizationChanged();
+            UpdateRegionListViewAppearance();
+            if (languageChanged)
+            {
+                UpdateServerNames();
             }
         }
 
@@ -892,11 +833,7 @@ namespace AWSServerSelector
             }
             catch (Exception ex)
             {
-                _messageService.Show(
-                    $"Не удалось открыть файл hosts: {ex.Message}\n\nПуть: {HostsPath}",
-                    "Ошибка",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                ShowErrorToast($"Не удалось открыть файл hosts: {ex.Message}\n\nПуть: {HostsPath}");
             }
         }
 
@@ -930,12 +867,18 @@ namespace AWSServerSelector
             }
             catch (Exception ex)
             {
-                _messageService.Show(
-                    $"Не удалось открыть окно информации о подключении: {ex.Message}",
-                    "Ошибка",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                ShowErrorToast($"Не удалось открыть окно информации о подключении: {ex.Message}");
             }
+        }
+
+        private void ShowWarningToast(string message)
+        {
+            _notificationService.ShowWarning(MainNotificationsChannel, message);
+        }
+
+        private void ShowErrorToast(string message)
+        {
+            _notificationService.ShowError(MainNotificationsChannel, message);
         }
     }
 }

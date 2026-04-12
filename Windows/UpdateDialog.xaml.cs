@@ -1,6 +1,8 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using System.Windows;
+using AWSServerSelector.Models;
 using AWSServerSelector.Services.Interfaces;
 using AWSServerSelector.ViewModels;
 
@@ -8,18 +10,22 @@ namespace AWSServerSelector;
 
 public partial class UpdateDialog : Window
 {
+    private const string UpdateNotificationsChannel = "update";
+
     private readonly UpdateDialogViewModel _viewModel;
-    private readonly IMessageService _messageService;
+    private readonly INotificationService _notificationService;
     private readonly IExternalNavigationService _externalNavigationService;
+    public ReadOnlyObservableCollection<NotificationItem> ToastNotifications { get; }
 
     public UpdateDialog(
         UpdateDialogViewModel viewModel,
-        IMessageService messageService,
+        INotificationService notificationService,
         IExternalNavigationService externalNavigationService)
     {
         _viewModel = viewModel;
-        _messageService = messageService;
+        _notificationService = notificationService;
         _externalNavigationService = externalNavigationService;
+        ToastNotifications = _notificationService.GetNotifications(UpdateNotificationsChannel);
         InitializeComponent();
         DataContext = _viewModel;
         DialogActionBar.SecondaryButtonText = LocalizationManager.GetString("DownloadUpdate");
@@ -49,7 +55,7 @@ public partial class UpdateDialog : Window
         {
         if (string.IsNullOrEmpty(_viewModel.DownloadUrl))
         {
-            _messageService.Show("Ссылка для скачивания недоступна.", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError(UpdateNotificationsChannel, "Ссылка для скачивания недоступна.");
             return;
         }
 
@@ -63,7 +69,7 @@ public partial class UpdateDialog : Window
         }
         catch (Exception ex)
         {
-            _messageService.Show($"Ошибка при открытии ссылки: {ex.Message}", "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            _notificationService.ShowError(UpdateNotificationsChannel, $"Ошибка при открытии ссылки: {ex.Message}");
         }
         finally
         {

@@ -109,11 +109,11 @@ namespace AWSServerSelector
             services.AddSingleton<IAwsIpRangeService, AwsIpRangeService>();
             services.AddSingleton<IDialogService, DialogService>();
             services.AddSingleton<IRegionCatalogService, RegionCatalogService>();
-            services.AddSingleton<IMessageService, MessageService>();
             services.AddSingleton<IExternalNavigationService, ExternalNavigationService>();
             services.AddSingleton<IClipboardService, ClipboardService>();
             services.AddSingleton<IDispatcherTimerFactory, DispatcherTimerFactory>();
             services.AddSingleton<INetworkProbeService, NetworkProbeService>();
+            services.AddSingleton<INotificationService, NotificationService>();
             services.AddSingleton<IConnectionStatusTextService, ConnectionStatusTextService>();
             services.AddSingleton<IHostsContentBuilder, HostsContentBuilder>();
             services.AddSingleton<ILocalizationService, LocalizationService>();
@@ -144,13 +144,6 @@ namespace AWSServerSelector
         private static void HandleStartupFailure(Exception ex)
         {
             AppLogger.Error("Application startup failed due to configuration error.", ex);
-            MessageBox.Show(
-                "Не удалось запустить приложение из-за ошибки конфигурации.\n" +
-                "Проверьте файлы appsettings.json и Config/regions.json.\n\n" +
-                $"Детали: {ex.Message}",
-                "Ошибка конфигурации",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
             Current?.Shutdown(-1);
         }
 

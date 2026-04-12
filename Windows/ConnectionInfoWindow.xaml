@@ -121,5 +121,12 @@
                                          SecondaryClick="RefreshButton_Click"
                                          PrimaryButtonText="{x:Static local:LocalizationManager.Close}"
                                          PrimaryClick="CloseButton_Click"/>
+
+        <controls:ToastHostControl Grid.RowSpan="3"
+                                   Panel.ZIndex="100"
+                                   HostMargin="0,0,0,56"
+                                   ToastMinWidth="420"
+                                   ToastMaxWidth="520"
+                                   ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ToastNotifications}"/>
     </Grid>
 </Window>

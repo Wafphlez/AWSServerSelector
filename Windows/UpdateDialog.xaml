@@ -84,6 +84,13 @@
                                          ButtonHeight="30"
                                          SecondaryClick="DownloadButton_Click"
                                          PrimaryClick="CloseButton_Click"/>
+
+        <controls:ToastHostControl Grid.RowSpan="2"
+                                   Panel.ZIndex="100"
+                                   HostMargin="0,0,0,56"
+                                   ToastMinWidth="340"
+                                   ToastMaxWidth="380"
+                                   ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ToastNotifications}"/>
     </Grid>
 </Window>
 

@@ -1,18 +1,33 @@
 using System;
+using System.Collections.ObjectModel;
 using System.Windows;
+using AWSServerSelector.Models;
+using AWSServerSelector.Services.Interfaces;
 using AWSServerSelector.ViewModels;
 
 namespace AWSServerSelector;
 
 public partial class SettingsDialog : Window
 {
+    private const string SettingsNotificationsChannel = "settings";
+
     private readonly SettingsDialogViewModel _viewModel;
+    private readonly INotificationService _notificationService;
+    private readonly ILocalizationService _localizationService;
 
     public SettingsDialogViewModel ViewModel => _viewModel;
+    public ReadOnlyObservableCollection<NotificationItem> ToastNotifications { get; }
+    public event Action<(string selectedLanguage, ApplyMode applyMode, BlockMode blockMode, bool mergeUnstable)>? ApplyRequested;
 
-    public SettingsDialog(SettingsDialogViewModel viewModel)
+    public SettingsDialog(
+        SettingsDialogViewModel viewModel,
+        INotificationService notificationService,
+        ILocalizationService localizationService)
     {
         _viewModel = viewModel;
+        _notificationService = notificationService;
+        _localizationService = localizationService;
+        ToastNotifications = _notificationService.GetNotifications(SettingsNotificationsChannel);
         InitializeComponent();
         DataContext = _viewModel;
 
@@ -33,8 +48,11 @@ public partial class SettingsDialog : Window
 
     private void ApplyButton_Click(object sender, RoutedEventArgs e)
     {
-        DialogResult = true;
-        Close();
+        var result = _viewModel.CreateResult();
+        ApplyRequested?.Invoke(result);
+        _notificationService.ShowSuccess(
+            SettingsNotificationsChannel,
+            _localizationService.GetString("SettingsApplied"));
     }
 
     protected override void OnClosed(EventArgs e)

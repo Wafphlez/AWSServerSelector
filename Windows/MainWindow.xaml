@@ -589,5 +589,12 @@
                        Command="{Binding ApplySelectionCommand}"/>
             </StackPanel>
         </Border>
+
+        <controls:ToastHostControl Grid.RowSpan="6"
+                                   Panel.ZIndex="100"
+                                   HostMargin="0,0,0,20"
+                                   ToastMinWidth="420"
+                                   ToastMaxWidth="520"
+                                   ItemsSource="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ToastNotifications}"/>
     </Grid>
 </Window>
