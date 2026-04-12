@@ -1,0 +1,25 @@
+---
+description: Контракты сервисов, DI-регистрации и Options валидация
+alwaysApply: true
+---
+
+# Сервисы и контракты
+
+- Все новые сервисы оформляй как `Interface + Implementation`.
+- Имя интерфейса отражает роль (`IHostsFileService`, `INetworkProbeService`), а не техническую деталь.
+- Избегай прокси-слоев без добавленной ценности.
+
+# Dependency Injection
+
+- Регистрации выполнять централизованно в `App.xaml.cs`.
+- Не дублировать регистрации одного и того же контракта.
+- Выбор lifetime:
+  - `Singleton` для stateless/infra сервисов;
+  - `Transient` для ViewModels/окон, где нужен свежий экземпляр.
+
+# Configuration / Options
+
+- Новые конфигурационные блоки добавляй через `IOptions<T>` с `Validate(...)` и `ValidateOnStart()`.
+- При ошибке конфигурации:
+  - логировать через `AppLogger`,
+  - корректно завершать запуск без неявных падений.
