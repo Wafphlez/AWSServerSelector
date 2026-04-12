@@ -114,6 +114,13 @@ namespace AWSServerSelector
             services.AddSingleton<IMessageService, MessageService>();
             services.AddSingleton<IExternalNavigationService, ExternalNavigationService>();
             services.AddSingleton<IClipboardService, ClipboardService>();
+            services.AddSingleton<IClock, SystemClock>();
+            services.AddSingleton<IDispatcherTimerFactory, DispatcherTimerFactory>();
+            services.AddSingleton<INetworkProbeService, NetworkProbeService>();
+            services.AddSingleton<IHostsMutationService, HostsMutationService>();
+            services.AddSingleton<IConnectionStatusTextService, ConnectionStatusTextService>();
+            services.AddSingleton<IHostsContentBuilder, HostsContentBuilder>();
+            services.AddSingleton<ILocalizationService, LocalizationService>();
 
             services.AddSingleton<MainWindow>();
             services.AddTransient<SettingsDialogViewModel>();

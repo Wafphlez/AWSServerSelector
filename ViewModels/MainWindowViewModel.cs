@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using AWSServerSelector.Models;
+using AWSServerSelector.Services.Interfaces;
 
 namespace AWSServerSelector.ViewModels;
 
@@ -14,6 +15,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly Action _updatesAction;
     private readonly Action _openHostsAction;
     private readonly Action _connectionInfoAction;
+    private readonly ILocalizationService _localizationService;
 
     public MainWindowViewModel(
         ObservableCollection<ServerItem> serverItems,
@@ -24,7 +26,8 @@ public partial class MainWindowViewModel : ObservableObject
         Action aboutAction,
         Action updatesAction,
         Action openHostsAction,
-        Action connectionInfoAction)
+        Action connectionInfoAction,
+        ILocalizationService localizationService)
     {
         ServerItems = serverItems;
         ServerGroups = serverGroups;
@@ -35,6 +38,7 @@ public partial class MainWindowViewModel : ObservableObject
         _updatesAction = updatesAction;
         _openHostsAction = openHostsAction;
         _connectionInfoAction = connectionInfoAction;
+        _localizationService = localizationService;
     }
 
     public ObservableCollection<ServerItem> ServerItems { get; }
@@ -52,6 +56,33 @@ public partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     private string language = "en";
+
+    public string WindowTitle => _localizationService.GetString("AppTitle");
+    public string SettingsMenuText => _localizationService.GetString("Settings");
+    public string AboutMenuText => _localizationService.GetString("About");
+    public string CheckUpdatesMenuText => _localizationService.GetString("CheckUpdates");
+    public string OpenHostsMenuText => _localizationService.GetString("OpenHosts");
+    public string ConnectionInfoMenuText => _localizationService.GetString("ConnectionInfo");
+    public string SelectServersText => _localizationService.GetString("SelectServers");
+    public string LatencyHeaderText => _localizationService.GetString("Latency");
+    public string StatusText => _localizationService.GetString("StatusText");
+    public string RevertButtonText => _localizationService.GetString("ResetToDefault");
+    public string ApplyButtonText => _localizationService.GetString("ApplySelection");
+
+    public void NotifyLocalizationChanged()
+    {
+        OnPropertyChanged(nameof(WindowTitle));
+        OnPropertyChanged(nameof(SettingsMenuText));
+        OnPropertyChanged(nameof(AboutMenuText));
+        OnPropertyChanged(nameof(CheckUpdatesMenuText));
+        OnPropertyChanged(nameof(OpenHostsMenuText));
+        OnPropertyChanged(nameof(ConnectionInfoMenuText));
+        OnPropertyChanged(nameof(SelectServersText));
+        OnPropertyChanged(nameof(LatencyHeaderText));
+        OnPropertyChanged(nameof(StatusText));
+        OnPropertyChanged(nameof(RevertButtonText));
+        OnPropertyChanged(nameof(ApplyButtonText));
+    }
 
     [RelayCommand]
     private void ApplySelection() => _applyAction();

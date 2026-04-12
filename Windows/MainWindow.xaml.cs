@@ -5,8 +5,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -42,12 +40,15 @@ namespace AWSServerSelector
         private ConnectionInfoWindow? _connectionInfoWindow;
 
         private readonly ISettingsService _settingsService;
-        private readonly IHostsService _hostsService;
-        private readonly ILatencyService _latencyService;
+        private readonly IHostsMutationService _hostsMutationService;
+        private readonly INetworkProbeService _networkProbeService;
         private readonly IDialogService _dialogService;
         private readonly IRegionCatalogService _regionCatalogService;
         private readonly IMessageService _messageService;
         private readonly IExternalNavigationService _externalNavigationService;
+        private readonly IDispatcherTimerFactory _dispatcherTimerFactory;
+        private readonly IHostsContentBuilder _hostsContentBuilder;
+        private readonly ILocalizationService _localizationService;
         private readonly AppLinksOptions _appLinksOptions;
         private readonly MonitoringOptions _monitoringOptions;
         
@@ -72,22 +73,28 @@ namespace AWSServerSelector
 
         public MainWindow(
             ISettingsService settingsService,
-            IHostsService hostsService,
-            ILatencyService latencyService,
+            IHostsMutationService hostsMutationService,
+            INetworkProbeService networkProbeService,
             IDialogService dialogService,
             IRegionCatalogService regionCatalogService,
             IMessageService messageService,
             IExternalNavigationService externalNavigationService,
+            IDispatcherTimerFactory dispatcherTimerFactory,
+            IHostsContentBuilder hostsContentBuilder,
+            ILocalizationService localizationService,
             IOptions<AppLinksOptions> appLinksOptions,
             IOptions<MonitoringOptions> monitoringOptions)
         {
             _settingsService = settingsService;
-            _hostsService = hostsService;
-            _latencyService = latencyService;
+            _hostsMutationService = hostsMutationService;
+            _networkProbeService = networkProbeService;
             _dialogService = dialogService;
             _regionCatalogService = regionCatalogService;
             _messageService = messageService;
             _externalNavigationService = externalNavigationService;
+            _dispatcherTimerFactory = dispatcherTimerFactory;
+            _hostsContentBuilder = hostsContentBuilder;
+            _localizationService = localizationService;
             _appLinksOptions = appLinksOptions.Value;
             _monitoringOptions = monitoringOptions.Value;
             _regions = _regionCatalogService.Regions;
@@ -101,20 +108,16 @@ namespace AWSServerSelector
                 () => About_Click(this, new RoutedEventArgs()),
                 () => CheckUpdates_Click(this, new RoutedEventArgs()),
                 () => OpenHostsButton_Click(this, new RoutedEventArgs()),
-                () => ConnectionInfo_Click(this, new RoutedEventArgs()));
+                () => ConnectionInfo_Click(this, new RoutedEventArgs()),
+                _localizationService);
             InitializeComponent();
             DataContext = ViewModel;
             LoadSettings();
-            
-            // Force update UI after loading settings to ensure proper language display
-            UpdateUI();
-            UpdateStaticBindingElements();
             
             InitializeApplication();
             
             // Subscribe to language change events
             LocalizationManager.LanguageChanged += OnLanguageChanged;
-            LocalizationManager.PropertyChanged += OnLocalizationPropertyChanged;
         }
 
         private void InitializeApplication()
@@ -123,10 +126,7 @@ namespace AWSServerSelector
             StartPingTimer();
             
             UpdateRegionListViewAppearance();
-            UpdateUI();
-            
-            // Final UI update to ensure all static bindings are properly updated
-            UpdateStaticBindingElements();
+            ViewModel.NotifyLocalizationChanged();
         }
 
         private void InitializeServerList()
@@ -142,14 +142,14 @@ namespace AWSServerSelector
             {
                 var groupItem = new ServerGroupItem
                 {
-                    GroupName = LocalizationManager.GetGroupDisplayName(group.Key),
+                    GroupName = _localizationService.GetGroupDisplayName(group.Key),
                     IsExpanded = true
                 };
                 
                 foreach (var kv in group.OrderBy(x => x.Key))
                 {
                     var regionKey = kv.Key;
-                    var translatedName = LocalizationManager.GetServerDisplayName(regionKey, kv.Value.DisplayNameKey);
+                    var translatedName = _localizationService.GetServerDisplayName(regionKey, kv.Value.DisplayNameKey);
                     var displayName = translatedName + (kv.Value.Stable ? string.Empty : " ⚠︎");
                     var isDisabled = IsServerDisabledInHosts(regionKey);
                     
@@ -214,20 +214,16 @@ namespace AWSServerSelector
                 ViewModel.BlockMode = _blockMode;
                 ViewModel.MergeUnstable = _mergeUnstable;
                 ViewModel.Language = _currentLanguage;
-                LocalizationManager.SetLanguage(_currentLanguage);
-
-                System.Windows.Application.Current.Dispatcher.BeginInvoke(new Action(() =>
-                {
-                    UpdateUI();
-                    UpdateStaticBindingElements();
-                }), System.Windows.Threading.DispatcherPriority.Loaded);
+                _localizationService.SetLanguage(_currentLanguage);
+                ViewModel.NotifyLocalizationChanged();
             }
             catch (Exception ex)
             {
                 // Set default language to English on any error
                 AppLogger.Error("LoadSettings failed", ex);
                 _currentLanguage = "en";
-                LocalizationManager.SetLanguage(_currentLanguage);
+                _localizationService.SetLanguage(_currentLanguage);
+                ViewModel.NotifyLocalizationChanged();
             }
         }
 
@@ -260,7 +256,7 @@ namespace AWSServerSelector
 
         private void StartPingTimer()
         {
-            _pingTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_monitoringOptions.MainPingIntervalSeconds) };
+            _pingTimer = _dispatcherTimerFactory.Create(TimeSpan.FromSeconds(_monitoringOptions.MainPingIntervalSeconds));
             _pingTimer.Tick += async (_, __) => await UpdatePingResults();
             _pingTimer.Start();
         }
@@ -284,7 +280,7 @@ namespace AWSServerSelector
                     try
                     {
                         var hosts = _regions[item.RegionKey].Hosts;
-                        ms = await _latencyService.PingAsync(hosts[0], _monitoringOptions.MainPingTimeoutMs);
+                        ms = await _networkProbeService.PingAsync(hosts[0], _monitoringOptions.MainPingTimeoutMs);
                     }
                     catch
                     {
@@ -336,7 +332,7 @@ namespace AWSServerSelector
                 // Проверяем, есть ли записи 0.0.0.0 для всех хостов региона
                 foreach (var host in hosts)
                 {
-                    if (!_hostsService.IsHostBlocked(host))
+                    if (!_hostsMutationService.IsHostBlocked(host))
                     {
                         return false; // Если хотя бы один хост не заблокирован, сервер не отключен
                     }
@@ -379,8 +375,8 @@ namespace AWSServerSelector
                 string svcIp, pingIp;
                 try
                 {
-                    var svcAddrs = Dns.GetHostAddresses(serviceHost);
-                    var pingAddrs = Dns.GetHostAddresses(pingHost);
+                    var svcAddrs = _networkProbeService.ResolveHostAddresses(serviceHost);
+                    var pingAddrs = _networkProbeService.ResolveHostAddresses(pingHost);
                     if (svcAddrs.Length == 0 || pingAddrs.Length == 0)
                         throw new Exception("DNS lookup returned no addresses");
 
@@ -399,35 +395,14 @@ namespace AWSServerSelector
 
                 try
                 {
-                    _hostsService.Backup();
-
-                    var sb = new StringBuilder();
-                    sb.AppendLine("# Edited by Ping by Daylight");
-                    sb.AppendLine("# Universal Redirect mode: redirect all GameLift endpoints to selected region");
-                    sb.AppendLine($"# Need help? Discord: {_appLinksOptions.DiscordUrl}");
-                    sb.AppendLine();
-
-                    string currentGroup = "";
-                    foreach (var kv in _regions)
-                    {
-                        var groupName = GetGroupName(kv.Key);
-                        if (groupName != currentGroup)
-                        {
-                            sb.AppendLine($"# {GetGroupDisplayName(groupName)}");
-                            currentGroup = groupName;
-                        }
-                        
-                        var regionHosts = kv.Value.Hosts;
-                        foreach (var h in regionHosts)
-                        {
-                            bool isPing = h.Contains("ping", StringComparison.OrdinalIgnoreCase);
-                            var ip = isPing ? pingIp : svcIp;
-                            sb.AppendLine($"{ip} {h}");
-                        }
-                        sb.AppendLine();
-                    }
-
-                    WriteWrappedHostsSection(sb.ToString());
+                    var buildResult = _hostsContentBuilder.BuildUniversalRedirect(
+                        _regions,
+                        _appLinksOptions.DiscordUrl,
+                        svcIp,
+                        pingIp,
+                        GetGroupName,
+                        GetGroupDisplayName);
+                    WriteWrappedHostsSection(buildResult.Content);
                     FlushDns();
                     _messageService.Show(
                         "Файл hosts был успешно обновлен (Universal Redirect).\n\nПожалуйста, перезапустите игру, чтобы изменения вступили в силу.",
@@ -463,92 +438,31 @@ namespace AWSServerSelector
 
             try
             {
-                _hostsService.Backup();
-
                 var selectedRegions = selectedItems.Select(item => item.RegionKey).ToList();
-                bool anyStableSelected = selectedRegions.Any(regionKey => _regions[regionKey].Stable);
-
-                // Merge unstable servers logic
-                var allowedSet = new HashSet<string>(selectedRegions);
-                if (_mergeUnstable && !anyStableSelected)
+                var orderedRegionKeys = ServerGroups
+                    .SelectMany(group => group.Servers)
+                    .Select(server => server.RegionKey)
+                    .ToList();
+                var buildResult = _hostsContentBuilder.BuildGatekeep(
+                    _regions,
+                    orderedRegionKeys,
+                    selectedRegions,
+                    _blockMode,
+                    _mergeUnstable,
+                    _appLinksOptions.DiscordUrl,
+                    GetGroupName,
+                    GetGroupDisplayName);
+                if (!buildResult.Success)
                 {
-                    var missing = new List<string>();
-                    foreach (var region in selectedRegions)
-                    {
-                        if (!_regions[region].Stable)
-                        {
-                            var group = GetGroupName(region);
-                            bool stableExists = _regions.Any(kv => GetGroupName(kv.Key) == group && kv.Value.Stable);
-                            if (!stableExists)
-                                missing.Add(region);
-                        }
-                    }
-                    if (missing.Count > 0)
-                    {
-                        _messageService.Show(
-                            "Опция объединения нестабильных серверов включена, но стабильные серверы не найдены для: " +
-                            string.Join(", ", missing) + ".\nОтключите объединение нестабильных серверов в меню настроек или выберите стабильный сервер вручную.",
-                            "Стабильные серверы не найдены",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error);
-                        return;
-                    }
+                    _messageService.Show(
+                        buildResult.ErrorMessage ?? "Не удалось подготовить hosts-контент.",
+                        "Стабильные серверы не найдены",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
                 }
 
-                if (_mergeUnstable && !anyStableSelected)
-                {
-                    var additional = new List<string>();
-                    foreach (var region in allowedSet.ToList())
-                    {
-                        if (!_regions[region].Stable)
-                        {
-                            var group = GetGroupName(region);
-                            var alternative = _regions.FirstOrDefault(kv => GetGroupName(kv.Key) == group && kv.Value.Stable);
-                            if (!string.IsNullOrEmpty(alternative.Key))
-                                additional.Add(alternative.Key);
-                        }
-                    }
-                    foreach (var extra in additional)
-                        allowedSet.Add(extra);
-                }
-
-                var sb = new StringBuilder();
-                sb.AppendLine("# Edited by Ping by Daylight");
-                sb.AppendLine("# Unselected servers are blocked (Gatekeep Mode); selected servers are commented out.");
-                sb.AppendLine($"# Need help? Discord: {_appLinksOptions.DiscordUrl}");
-                sb.AppendLine();
-
-                string currentGroup = "";
-                foreach (var group in ServerGroups)
-                {
-                    foreach (var item in group.Servers)
-                    {
-                        var regionKey = item.RegionKey;
-                        var groupName = GetGroupName(regionKey);
-                        if (groupName != currentGroup)
-                        {
-                            sb.AppendLine($"# {GetGroupDisplayName(groupName)}");
-                            currentGroup = groupName;
-                        }
-                        
-                        bool allow = allowedSet.Contains(regionKey);
-                        var hosts = _regions[regionKey].Hosts;
-                        foreach (var h in hosts)
-                        {
-                            bool isPing = h.Contains("ping", StringComparison.OrdinalIgnoreCase);
-                            bool include = _blockMode == BlockMode.Both
-                                           || (_blockMode == BlockMode.OnlyPing && isPing)
-                                           || (_blockMode == BlockMode.OnlyService && !isPing);
-                            if (!include)
-                                continue;
-                            var prefix = allow ? "#" : "0.0.0.0".PadRight(9);
-                            sb.AppendLine($"{prefix} {h}");
-                        }
-                        sb.AppendLine();
-                    }
-                }
-
-                WriteWrappedHostsSection(sb.ToString());
+                WriteWrappedHostsSection(buildResult.Content);
                 FlushDns();
                 _messageService.Show(
                     "Файл hosts был успешно обновлен (Gatekeep).\n\nПожалуйста, перезапустите игру, чтобы изменения вступили в силу.",
@@ -574,7 +488,7 @@ namespace AWSServerSelector
         {
             try
             {
-                _hostsService.Backup();
+                _hostsMutationService.Backup();
                 WriteWrappedHostsSection(string.Empty);
                 FlushDns();
                 _messageService.Show(
@@ -645,13 +559,13 @@ namespace AWSServerSelector
                     var regionKey = item.RegionKey;
                     if (_mergeUnstable && !_regions[regionKey].Stable)
                     {
-                        item.DisplayName = LocalizationManager.GetServerDisplayName(regionKey, _regions[regionKey].DisplayNameKey);
+                        item.DisplayName = _localizationService.GetServerDisplayName(regionKey, _regions[regionKey].DisplayNameKey);
                         item.TextColor = new SolidColorBrush(Colors.White);
                         item.ToolTipText = string.Empty;
                     }
                     else if (!_regions[regionKey].Stable)
                     {
-                        item.DisplayName = LocalizationManager.GetServerDisplayName(regionKey, _regions[regionKey].DisplayNameKey) + " ⚠︎";
+                        item.DisplayName = _localizationService.GetServerDisplayName(regionKey, _regions[regionKey].DisplayNameKey) + " ⚠︎";
                         item.TextColor = new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Warning yellow
                         item.ToolTipText = "Unstable server: latency issues may occur.";
                     }
@@ -661,179 +575,24 @@ namespace AWSServerSelector
 
         private void WriteWrappedHostsSection(string innerContent)
         {
-            var original = _hostsService.Read();
-            _hostsService.Backup();
+            var original = _hostsMutationService.Read();
+            _hostsMutationService.Backup();
             var updated = HostsSectionBuilder.Build(original, SectionMarker, innerContent);
-            _hostsService.Write(updated);
+            _hostsMutationService.Write(updated);
         }
 
         private void FlushDns()
         {
-            _hostsService.FlushDns();
-        }
-
-        private void UpdateUI()
-        {
-            Title = LocalizationManager.GetString("AppTitle");
-            
-            // Update XAML elements that use static bindings
-            var statusTextElement = this.FindName("StatusText") as System.Windows.Controls.TextBlock;
-            if (statusTextElement != null)
-                statusTextElement.Text = LocalizationManager.GetString("StatusText");
-                
-            // Force update of window title
-            OnPropertyChanged(nameof(Title));
+            _hostsMutationService.FlushDns();
         }
 
         private void OnLanguageChanged(object? sender, EventArgs e)
         {
-            // Update UI elements that are not bound to static properties
             Dispatcher.Invoke(() =>
             {
-                UpdateUI();
+                ViewModel.NotifyLocalizationChanged();
                 UpdateServerNames();
-                UpdateXAMLBindings();
-                // Force refresh of XAML bindings
-                CommandManager.InvalidateRequerySuggested();
-                
-                // Force update of all server groups and items
-                foreach (var group in ServerGroups)
-                {
-                    group.OnPropertyChanged(nameof(ServerGroupItem.GroupName));
-                    foreach (var server in group.Servers)
-                    {
-                        server.OnPropertyChanged(nameof(ServerItem.DisplayName));
-                    }
-                }
             });
-        }
-
-        private void OnLocalizationPropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            // Force refresh of all XAML bindings when localization properties change
-            Dispatcher.Invoke(() =>
-            {
-                UpdateUI();
-                UpdateServerNames();
-                UpdateXAMLBindings();
-                CommandManager.InvalidateRequerySuggested();
-                
-                // Force update of all server groups and items
-                foreach (var group in ServerGroups)
-                {
-                    group.OnPropertyChanged(nameof(ServerGroupItem.GroupName));
-                    foreach (var server in group.Servers)
-                    {
-                        server.OnPropertyChanged(nameof(ServerItem.DisplayName));
-                    }
-                }
-            });
-        }
-
-        private void UpdateXAMLBindings()
-        {
-            // Force update of XAML bindings by refreshing the DataContext
-            var currentContext = DataContext;
-            DataContext = null;
-            DataContext = currentContext;
-            
-            // Force update of all static bindings by invalidating them
-            CommandManager.InvalidateRequerySuggested();
-            
-            // Force refresh of all XAML elements that use static bindings
-            this.InvalidateVisual();
-            
-            // Force update of specific XAML elements that use static bindings
-            UpdateStaticBindingElements();
-        }
-        
-        private void UpdateStaticBindingElements()
-        {
-            // Find and update elements that use static bindings
-            var selectServersText = this.FindName("SelectServersText") as System.Windows.Controls.TextBlock;
-            if (selectServersText == null)
-            {
-                // Try to find the TextBlock in the header
-                var headerBorder = this.FindName("ServerListHeader") as Border;
-                if (headerBorder != null)
-                {
-                    var grid = headerBorder.Child as Grid;
-                    if (grid != null && grid.Children.Count > 0)
-                    {
-                        selectServersText = grid.Children[0] as System.Windows.Controls.TextBlock;
-                    }
-                }
-            }
-            
-            if (selectServersText != null)
-            {
-                selectServersText.Text = LocalizationManager.GetString("SelectServers");
-            }
-            
-            // Update latency text
-            var latencyText = this.FindName("LatencyText") as System.Windows.Controls.TextBlock;
-            if (latencyText == null)
-            {
-                // Try to find the TextBlock in the header
-                var headerBorder = this.FindName("ServerListHeader") as Border;
-                if (headerBorder != null)
-                {
-                    var grid = headerBorder.Child as Grid;
-                    if (grid != null && grid.Children.Count > 2)
-                    {
-                        latencyText = grid.Children[2] as System.Windows.Controls.TextBlock;
-                    }
-                }
-            }
-            
-            if (latencyText != null)
-            {
-                latencyText.Text = LocalizationManager.GetString("Latency");
-            }
-            
-            // Update menu items
-            var settingsMenuItem = this.FindName("SettingsMenuItem") as MenuItem;
-            if (settingsMenuItem != null)
-            {
-                settingsMenuItem.Header = LocalizationManager.GetString("Settings");
-            }
-            
-            var aboutMenuItem = this.FindName("AboutMenuItem") as MenuItem;
-            if (aboutMenuItem != null)
-            {
-                aboutMenuItem.Header = LocalizationManager.GetString("About");
-            }
-            
-            var checkUpdatesMenuItem = this.FindName("CheckUpdatesMenuItem") as MenuItem;
-            if (checkUpdatesMenuItem != null)
-            {
-                checkUpdatesMenuItem.Header = LocalizationManager.GetString("CheckUpdates");
-            }
-            
-            // Update menu items
-            var openHostsMenuItem = this.FindName("OpenHostsMenuItem") as MenuItem;
-            if (openHostsMenuItem != null)
-            {
-                openHostsMenuItem.Header = LocalizationManager.GetString("OpenHosts");
-            }
-            
-            var connectionInfoMenuItem = this.FindName("ConnectionInfoMenuItem") as MenuItem;
-            if (connectionInfoMenuItem != null)
-            {
-                connectionInfoMenuItem.Header = LocalizationManager.GetString("ConnectionInfo");
-            }
-            
-            var revertButton = this.FindName("RevertButton") as Button;
-            if (revertButton != null)
-            {
-                revertButton.Content = LocalizationManager.GetString("ResetToDefault");
-            }
-            
-            var applyButton = this.FindName("ApplyButton") as Button;
-            if (applyButton != null)
-            {
-                applyButton.Content = LocalizationManager.GetString("ApplySelection");
-            }
         }
 
         private void UpdateServerNames()
@@ -842,7 +601,7 @@ namespace AWSServerSelector
             foreach (var group in ServerGroups)
             {
                 var originalGroupName = GetGroupName(group.Servers.FirstOrDefault()?.RegionKey ?? "");
-                group.GroupName = LocalizationManager.GetGroupDisplayName(originalGroupName);
+                group.GroupName = _localizationService.GetGroupDisplayName(originalGroupName);
             }
 
             // Update server names
@@ -850,7 +609,7 @@ namespace AWSServerSelector
             {
                 foreach (var item in group.Servers)
                 {
-                    var translatedName = LocalizationManager.GetServerDisplayName(item.RegionKey, _regions[item.RegionKey].DisplayNameKey);
+                    var translatedName = _localizationService.GetServerDisplayName(item.RegionKey, _regions[item.RegionKey].DisplayNameKey);
                     var isUnstable = !_regions[item.RegionKey].Stable;
                     item.DisplayName = translatedName + (isUnstable ? " ⚠︎" : "");
                 }
@@ -863,7 +622,7 @@ namespace AWSServerSelector
             updateDialog.Owner = this;
             
             // Запускаем проверку обновлений в диалоге
-            updateDialog.StartUpdateCheck(CurrentVersion);
+            _ = updateDialog.StartUpdateCheckAsync(CurrentVersion);
             
             _dialogService.ShowUpdateDialog(updateDialog);
         }
@@ -872,11 +631,8 @@ namespace AWSServerSelector
         {
             var about = App.Services.GetRequiredService<AboutDialog>();
             about.Owner = this;
-            about.Title = LocalizationManager.GetString("AboutTitle");
-            about.AboutText = LocalizationManager.GetString("AboutText");
-            about.Developer = LocalizationManager.GetString("Developer");
-            about.VersionText = LocalizationManager.GetString("Version", CurrentVersion);
-            about.AwesomeText = LocalizationManager.GetString("Awesome");
+            about.ViewModel.Configure(_localizationService, CurrentVersion);
+            about.Title = about.ViewModel.DialogTitle;
             
             _dialogService.ShowAboutDialog(about);
         }
@@ -885,7 +641,7 @@ namespace AWSServerSelector
         {
             var dialog = App.Services.GetRequiredService<SettingsDialog>();
             dialog.Owner = this;
-            dialog.InitializeFromSettings(
+            dialog.ViewModel.InitializeFromSettings(
                 _currentLanguage,
                 _applyMode == ApplyMode.UniversalRedirect ? "service" : "hosts",
                 _blockMode == BlockMode.Both,
@@ -895,58 +651,50 @@ namespace AWSServerSelector
             
             if (_dialogService.ShowSettingsDialog(dialog) == true)
             {
+                var result = dialog.ViewModel.CreateResult();
                 // Check if language changed
-                bool languageChanged = dialog.SelectedLanguage != _currentLanguage;
+                bool languageChanged = result.selectedLanguage != _currentLanguage;
                 
                 // Check if mode changed
-                bool modeChanged = dialog.SelectedMode != (_applyMode == ApplyMode.UniversalRedirect ? "service" : "hosts");
-                
-                // Check if block mode changed
-                BlockMode newBlockMode = BlockMode.Both;
-                if (dialog.IsBlockPing) newBlockMode = BlockMode.OnlyPing;
-                else if (dialog.IsBlockService) newBlockMode = BlockMode.OnlyService;
-                bool blockModeChanged = newBlockMode != _blockMode;
+                bool modeChanged = result.applyMode != _applyMode;
+                bool blockModeChanged = result.blockMode != _blockMode;
                 
                 // Check if merge unstable changed
-                bool mergeUnstableChanged = dialog.IsMergeUnstable != _mergeUnstable;
+                bool mergeUnstableChanged = result.mergeUnstable != _mergeUnstable;
                 
                 // Apply changes
                 if (languageChanged)
                 {
-                    _currentLanguage = dialog.SelectedLanguage;
-                    LocalizationManager.SetLanguageAndNotify(_currentLanguage);
+                    _currentLanguage = result.selectedLanguage;
+                    _localizationService.SetLanguageAndNotify(_currentLanguage);
                 }
                 
                 if (modeChanged)
                 {
-                    _applyMode = dialog.SelectedMode == "service" ? ApplyMode.UniversalRedirect : ApplyMode.Gatekeep;
+                    _applyMode = result.applyMode;
                     OnPropertyChanged(nameof(ApplyMode));
                 }
                 
                 if (blockModeChanged)
                 {
-                    _blockMode = newBlockMode;
+                    _blockMode = result.blockMode;
                     OnPropertyChanged(nameof(BlockMode));
                 }
                 
                 if (mergeUnstableChanged)
                 {
-                    _mergeUnstable = dialog.IsMergeUnstable;
+                    _mergeUnstable = result.mergeUnstable;
                     OnPropertyChanged(nameof(_mergeUnstable));
                 }
                 
                 // Save settings
                 SaveSettings();
-                
-                // Update UI if language changed
+                ViewModel.NotifyLocalizationChanged();
+                UpdateRegionListViewAppearance();
                 if (languageChanged)
                 {
-                    UpdateUI();
+                    UpdateServerNames();
                 }
-                
-                SaveSettings();
-                UpdateRegionListViewAppearance();
-                UpdateUI();
             }
         }
 
@@ -962,10 +710,10 @@ namespace AWSServerSelector
 
             try
             {
-                _hostsService.Backup();
+                _hostsMutationService.Backup();
 
-                var defaultHosts = _hostsService.ReadDefaultTemplate();
-                _hostsService.Write(defaultHosts);
+                var defaultHosts = _hostsMutationService.ReadDefaultTemplate();
+                _hostsMutationService.Write(defaultHosts);
                 FlushDns();
 
                 _messageService.Show(
@@ -1007,7 +755,6 @@ namespace AWSServerSelector
         {
             _pingTimer?.Stop();
             LocalizationManager.LanguageChanged -= OnLanguageChanged;
-            LocalizationManager.PropertyChanged -= OnLocalizationPropertyChanged;
             base.OnClosed(e);
         }
 

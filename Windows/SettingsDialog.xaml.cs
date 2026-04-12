@@ -8,12 +8,7 @@ public partial class SettingsDialog : Window
 {
     private readonly SettingsDialogViewModel _viewModel;
 
-    public string SelectedLanguage => _viewModel.SelectedLanguage;
-    public string SelectedMode => _viewModel.SelectedMode;
-    public bool IsBlockBoth => _viewModel.IsBlockBoth;
-    public bool IsBlockPing => _viewModel.IsBlockPing;
-    public bool IsBlockService => _viewModel.IsBlockService;
-    public bool IsMergeUnstable => _viewModel.IsMergeUnstable;
+    public SettingsDialogViewModel ViewModel => _viewModel;
 
     public SettingsDialog(SettingsDialogViewModel viewModel)
     {
@@ -23,22 +18,6 @@ public partial class SettingsDialog : Window
 
         Title = _viewModel.SettingsTitle;
         LocalizationManager.LanguageChanged += OnLanguageChanged;
-    }
-
-    public void InitializeFromSettings(
-        string language,
-        string mode,
-        bool blockBoth,
-        bool blockPing,
-        bool blockService,
-        bool mergeUnstable)
-    {
-        _viewModel.SelectedLanguage = language;
-        _viewModel.SelectedMode = mode;
-        _viewModel.IsBlockBoth = blockBoth;
-        _viewModel.IsBlockPing = blockPing;
-        _viewModel.IsBlockService = blockService;
-        _viewModel.IsMergeUnstable = mergeUnstable;
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e)

@@ -346,4 +346,13 @@
   <data name="MatchCopied" xml:space="preserve">
     <value>IP матча скопирован в буфер обмена</value>
   </data>
+  <data name="NpcapStatusOk" xml:space="preserve">
+    <value>Npcap: работает</value>
+  </data>
+  <data name="NpcapStatusUnavailable" xml:space="preserve">
+    <value>Npcap: недоступен</value>
+  </data>
+  <data name="NpcapStatusUnknown" xml:space="preserve">
+    <value>Npcap: неизвестно</value>
+  </data>
 </root>

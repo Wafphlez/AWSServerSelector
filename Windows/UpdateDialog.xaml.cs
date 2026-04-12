@@ -22,40 +22,21 @@ public partial class UpdateDialog : Window
         _externalNavigationService = externalNavigationService;
         InitializeComponent();
         DataContext = _viewModel;
+        DialogActionBar.SecondaryButtonText = LocalizationManager.GetString("DownloadUpdate");
+        DialogActionBar.PrimaryButtonText = LocalizationManager.GetString("Close");
     }
 
-        public void StartUpdateCheck(string currentVersion)
+    public async Task StartUpdateCheckAsync(string currentVersion)
+    {
+        try
         {
-            _ = Task.Run(async () =>
-            {
-                try
-                {
-                    await _viewModel.CheckForUpdatesAsync(currentVersion);
-                    
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        if (!string.IsNullOrWhiteSpace(_viewModel.DownloadUrl))
-                        {
-                            UpdateInfoPanel.Visibility = Visibility.Visible;
-                            DialogActionBar.SecondaryButtonVisibility = Visibility.Visible;
-                            DialogActionBar.SecondaryButtonText = LocalizationManager.GetString("DownloadUpdate");
-                        }
-                        else
-                        {
-                            UpdateInfoPanel.Visibility = Visibility.Collapsed;
-                            DialogActionBar.SecondaryButtonVisibility = Visibility.Collapsed;
-                        }
-                    });
-                }
-                catch (Exception ex)
-                {
-                    await Dispatcher.InvokeAsync(() =>
-                    {
-                        var errorText = LocalizationManager.GetString("UpdateCheckError") ?? "Error checking for updates:";
-                        _viewModel.StatusText = $"{errorText} {ex.Message}";
-                    });
-                }
-            });
+            await _viewModel.CheckForUpdatesAsync(currentVersion);
+        }
+        catch (Exception ex)
+        {
+            var errorText = LocalizationManager.GetString("UpdateCheckError") ?? "Error checking for updates:";
+            _viewModel.StatusText = $"{errorText} {ex.Message}";
+        }
     }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
@@ -64,7 +45,7 @@ public partial class UpdateDialog : Window
             Close();
         }
 
-        private async void DownloadButton_Click(object sender, RoutedEventArgs e)
+        private void DownloadButton_Click(object sender, RoutedEventArgs e)
         {
         if (string.IsNullOrEmpty(_viewModel.DownloadUrl))
         {

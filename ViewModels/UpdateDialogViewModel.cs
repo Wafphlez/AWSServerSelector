@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using AWSServerSelector.Services.Interfaces;
+using System.Windows;
 
 namespace AWSServerSelector.ViewModels;
 
@@ -28,6 +29,12 @@ public partial class UpdateDialogViewModel : ObservableObject
 
     [ObservableProperty]
     private string latestVersionText = string.Empty;
+
+    [ObservableProperty]
+    private Visibility updateInfoVisibility = Visibility.Collapsed;
+
+    [ObservableProperty]
+    private Visibility downloadButtonVisibility = Visibility.Collapsed;
 
     public string DownloadUrl => _downloadUrl;
 
@@ -69,6 +76,8 @@ public partial class UpdateDialogViewModel : ObservableObject
                 }
 
                 StatusText = LocalizationManager.GetString("UpdateDownloadUnavailable");
+                UpdateInfoVisibility = Visibility.Collapsed;
+                DownloadButtonVisibility = Visibility.Collapsed;
                 return;
             }
 
@@ -98,12 +107,16 @@ public partial class UpdateDialogViewModel : ObservableObject
         UpdateDescription = release.Body.Length > 200 ? release.Body[..200] + "..." : release.Body;
         UpdateSize = $"{LocalizationManager.GetString("UpdateSize")} {FormatFileSize(downloadAsset.Size)}";
         _downloadUrl = downloadAsset.BrowserDownloadUrl;
+        UpdateInfoVisibility = Visibility.Visible;
+        DownloadButtonVisibility = Visibility.Visible;
     }
 
     private void SetNoUpdateInfo()
     {
         StatusText = LocalizationManager.GetString("NoUpdatesAvailable");
         _downloadUrl = string.Empty;
+        UpdateInfoVisibility = Visibility.Collapsed;
+        DownloadButtonVisibility = Visibility.Collapsed;
     }
 
     private static string FormatFileSize(long bytes)

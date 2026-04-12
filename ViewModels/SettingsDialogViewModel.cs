@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
+using AWSServerSelector.Models;
 
 namespace AWSServerSelector.ViewModels;
 
@@ -45,6 +46,31 @@ public partial class SettingsDialogViewModel : ObservableObject
     public string MergeUnstableText => LocalizationManager.GetString("MergeUnstable");
     public string DefaultOptionsText => LocalizationManager.GetString("DefaultOptions");
     public string ApplyChangesText => LocalizationManager.GetString("ApplyChanges");
+
+    public void InitializeFromSettings(
+        string language,
+        string mode,
+        bool blockBoth,
+        bool blockPing,
+        bool blockService,
+        bool mergeUnstable)
+    {
+        SelectedLanguage = language;
+        SelectedMode = mode;
+        IsBlockBoth = blockBoth;
+        IsBlockPing = blockPing;
+        IsBlockService = blockService;
+        IsMergeUnstable = mergeUnstable;
+    }
+
+    public (string selectedLanguage, ApplyMode applyMode, BlockMode blockMode, bool mergeUnstable) CreateResult()
+    {
+        var applyMode = SelectedMode == "service" ? ApplyMode.UniversalRedirect : ApplyMode.Gatekeep;
+        var blockMode = BlockMode.Both;
+        if (IsBlockPing) blockMode = BlockMode.OnlyPing;
+        else if (IsBlockService) blockMode = BlockMode.OnlyService;
+        return (SelectedLanguage, applyMode, blockMode, IsMergeUnstable);
+    }
 
     public void ResetDefaults()
     {

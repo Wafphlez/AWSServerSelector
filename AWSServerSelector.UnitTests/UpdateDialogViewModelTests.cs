@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using System.Windows;
 using AWSServerSelector.Services.Interfaces;
 using AWSServerSelector.ViewModels;
 using Xunit;
@@ -15,6 +16,8 @@ public class UpdateDialogViewModelTests
         await vm.CheckForUpdatesAsync("1.0.0");
 
         Assert.False(string.IsNullOrWhiteSpace(vm.DownloadUrl));
+        Assert.Equal(Visibility.Visible, vm.UpdateInfoVisibility);
+        Assert.Equal(Visibility.Visible, vm.DownloadButtonVisibility);
     }
 
     [Fact]
@@ -25,6 +28,8 @@ public class UpdateDialogViewModelTests
         await vm.CheckForUpdatesAsync("1.0.0");
 
         Assert.True(string.IsNullOrWhiteSpace(vm.DownloadUrl));
+        Assert.Equal(Visibility.Collapsed, vm.UpdateInfoVisibility);
+        Assert.Equal(Visibility.Collapsed, vm.DownloadButtonVisibility);
     }
 
     private sealed class FakeUpdateService : IUpdateService

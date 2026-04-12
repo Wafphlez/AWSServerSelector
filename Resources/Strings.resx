@@ -346,4 +346,13 @@
   <data name="MatchCopied" xml:space="preserve">
     <value>Match IP copied to clipboard</value>
   </data>
+  <data name="NpcapStatusOk" xml:space="preserve">
+    <value>Npcap: OK</value>
+  </data>
+  <data name="NpcapStatusUnavailable" xml:space="preserve">
+    <value>Npcap: unavailable</value>
+  </data>
+  <data name="NpcapStatusUnknown" xml:space="preserve">
+    <value>Npcap: unknown</value>
+  </data>
 </root>

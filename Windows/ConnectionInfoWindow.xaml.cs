@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
@@ -26,16 +25,17 @@ namespace AWSServerSelector
     public partial class ConnectionInfoWindow : Window, INotifyPropertyChanged
     {
         private readonly ConnectionInfoViewModel _viewModel = new();
-        private readonly IConnectionMonitorService _connectionMonitorService;
         private readonly IMessageService _messageService;
         private readonly IClipboardService _clipboardService;
         private readonly IRegionCatalogService _regionCatalogService;
+        private readonly INetworkProbeService _networkProbeService;
+        private readonly IDispatcherTimerFactory _dispatcherTimerFactory;
+        private readonly IConnectionStatusTextService _connectionStatusTextService;
         private readonly MonitoringOptions _monitoringOptions;
         #region Fields
 
         private DispatcherTimer? _monitoringTimer;
         private const string DBD_PROCESS_NAME = "DeadByDaylight-Win64-Shipping";
-        private readonly Ping _pinger = new();
         private ConnectionInfo? _currentLobbyConnection;
         private ConnectionInfo? _currentGameConnection;
         private UdpGameMonitor? _udpMonitor;
@@ -44,7 +44,6 @@ namespace AWSServerSelector
         
         // Фоновый мониторинг пинга (через DispatcherTimer)
         private DispatcherTimer? _pingTimer;
-        private Ping? _backgroundPinger; // Отдельный Ping объект для фонового мониторинга!
         private string? _currentGameServerIp;
         private int _currentGameServerPort;
         
@@ -61,16 +60,20 @@ namespace AWSServerSelector
         #region Constructor
 
         public ConnectionInfoWindow(
-            IConnectionMonitorService connectionMonitorService,
             IMessageService messageService,
             IClipboardService clipboardService,
             IRegionCatalogService regionCatalogService,
+            INetworkProbeService networkProbeService,
+            IDispatcherTimerFactory dispatcherTimerFactory,
+            IConnectionStatusTextService connectionStatusTextService,
             IOptions<MonitoringOptions> monitoringOptions)
         {
-            _connectionMonitorService = connectionMonitorService;
             _messageService = messageService;
             _clipboardService = clipboardService;
             _regionCatalogService = regionCatalogService;
+            _networkProbeService = networkProbeService;
+            _dispatcherTimerFactory = dispatcherTimerFactory;
+            _connectionStatusTextService = connectionStatusTextService;
             _monitoringOptions = monitoringOptions.Value;
             _awsRegionToGameLiftHosts = BuildAwsRegionToHostsMap(_regionCatalogService.Regions.Values);
             InitializeComponent();
@@ -116,10 +119,7 @@ namespace AWSServerSelector
 
         private void StartMonitoring()
         {
-            _monitoringTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(_monitoringOptions.ConnectionPollIntervalSeconds)
-            };
+            _monitoringTimer = _dispatcherTimerFactory.Create(TimeSpan.FromSeconds(_monitoringOptions.ConnectionPollIntervalSeconds));
             _monitoringTimer.Tick += async (s, e) => await MonitorConnectionsAsync();
             _monitoringTimer.Start();
 
@@ -589,8 +589,7 @@ namespace AWSServerSelector
             {
                 try
                 {
-                    var reply = await _pinger.SendPingAsync(connection.RemoteAddress, _monitoringOptions.ConnectionPingTimeoutMs);
-                    connection.Ping = reply.Status == IPStatus.Success ? reply.RoundtripTime : -1;
+                    connection.Ping = await _networkProbeService.PingAsync(connection.RemoteAddress, _monitoringOptions.ConnectionPingTimeoutMs);
                 }
                 catch
                 {
@@ -1040,34 +1039,18 @@ namespace AWSServerSelector
             {
                 Debug.WriteLine($"   TCP: {tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}, Region={tcpConnection.Region}, Ping={tcpConnection.Ping}ms");
                 
-                _viewModel.LobbyStatusText = LocalizationManager.Connected;
-                _viewModel.LobbyStatusForeground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45));
-
-                _viewModel.LobbyIpText = $"{tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}";
-                _viewModel.LobbyCopyVisibility = Visibility.Visible;
-
-                _viewModel.LobbyServerText = tcpConnection.ServerName;
-                _viewModel.LobbyRegionText = tcpConnection.Region;
-
-                _viewModel.LobbyPingText = tcpConnection.Ping >= 0
-                    ? $"{tcpConnection.Ping} ms" 
-                    : LocalizationManager.NotMeasured;
-                _viewModel.LobbyPingForeground = GetPingColor(tcpConnection.Ping);
+                _viewModel.ApplyLobbyConnected(
+                    $"{tcpConnection.RemoteAddress}:{tcpConnection.RemotePort}",
+                    tcpConnection.ServerName,
+                    tcpConnection.Region,
+                    tcpConnection.Ping >= 0 ? $"{tcpConnection.Ping} ms" : LocalizationManager.NotMeasured,
+                    GetPingColor(tcpConnection.Ping));
                 
                 Debug.WriteLine($"   ✅ UI лобби обновлен");
             }
             else
             {
-                _viewModel.LobbyStatusText = LocalizationManager.NotConnected;
-                _viewModel.LobbyStatusForeground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C));
-
-                _viewModel.LobbyIpText = LocalizationManager.NotDetermined;
-                _viewModel.LobbyCopyVisibility = Visibility.Collapsed;
-
-                _viewModel.LobbyServerText = LocalizationManager.NotDetermined;
-                _viewModel.LobbyRegionText = LocalizationManager.NotDetermined;
-                _viewModel.LobbyPingText = LocalizationManager.NotMeasured;
-                _viewModel.LobbyPingForeground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
+                _viewModel.ApplyLobbyDisconnected();
                 
                 Debug.WriteLine($"   ⚠️ TCP отсутствует, показываем 'Не подключено'");
                 
@@ -1079,14 +1062,11 @@ namespace AWSServerSelector
             // Обновляем UDP (игра)
             if (udpConnection != null)
             {
-                _viewModel.GameStatusText = BuildGameStatusText(LocalizationManager.Connected);
-                _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0x28, 0xA7, 0x45));
-
-                _viewModel.GameIpText = $"{udpConnection.RemoteAddress}:{udpConnection.RemotePort}";
-                _viewModel.GameCopyVisibility = Visibility.Visible;
-
-                _viewModel.GameServerText = udpConnection.ServerName;
-                _viewModel.GameRegionText = udpConnection.Region;
+                _viewModel.ApplyGameConnected(
+                    BuildGameStatusText(LocalizationManager.Connected),
+                    $"{udpConnection.RemoteAddress}:{udpConnection.RemotePort}",
+                    udpConnection.ServerName,
+                    udpConnection.Region);
                 
                 // Проверяем, изменился ли IP адрес игрового сервера
                 // Сравниваем с последним сохраненным IP игры (не с GameLift хостом!)
@@ -1136,22 +1116,13 @@ namespace AWSServerSelector
                 {
                     // Npcap работает, но сервер матча еще не пойман.
                     // Не показываем это как ошибку подключения.
-                    _viewModel.GameStatusText = BuildGameStatusText(LocalizationManager.Measuring);
+                    _viewModel.ApplyGameDisconnected(BuildGameStatusText(LocalizationManager.Measuring));
                     _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07));
                 }
                 else
                 {
-                    _viewModel.GameStatusText = BuildGameStatusText(LocalizationManager.NotConnected);
-                    _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0xDC, 0x14, 0x3C));
+                    _viewModel.ApplyGameDisconnected(BuildGameStatusText(LocalizationManager.NotConnected));
                 }
-
-                _viewModel.GameIpText = LocalizationManager.NotDetermined;
-                _viewModel.GameCopyVisibility = Visibility.Collapsed;
-
-                _viewModel.GameServerText = LocalizationManager.NotDetermined;
-                _viewModel.GameRegionText = LocalizationManager.NotDetermined;
-                _viewModel.GamePingText = LocalizationManager.NotMeasured;
-                _viewModel.GamePingForeground = new SolidColorBrush(Color.FromRgb(0xB0, 0xB0, 0xB0));
                 
                 // Сбрасываем сохраненный IP игры
                 _lastGameIp = null;
@@ -1166,24 +1137,9 @@ namespace AWSServerSelector
 
         private void UpdateNoConnection()
         {
-            var snapshot = _connectionMonitorService.GetCurrentSnapshotAsync().GetAwaiter().GetResult();
-            _viewModel.LobbyStatusText = LocalizationManager.GameNotRunning;
-            _viewModel.LobbyStatusForeground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
-            _viewModel.LobbyIpText = snapshot.Lobby.IpText;
-            _viewModel.LobbyCopyVisibility = Visibility.Collapsed;
-            _viewModel.LobbyServerText = snapshot.Lobby.ServerText;
-            _viewModel.LobbyRegionText = snapshot.Lobby.RegionText;
-            _viewModel.LobbyPingText = snapshot.Lobby.PingText;
-            _viewModel.LobbyPingForeground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
+            _viewModel.ApplyLobbyNotRunning();
 
-            _viewModel.GameStatusText = BuildGameStatusText(LocalizationManager.GameNotRunning);
-            _viewModel.GameStatusForeground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
-            _viewModel.GameIpText = snapshot.Game.IpText;
-            _viewModel.GameCopyVisibility = Visibility.Collapsed;
-            _viewModel.GameServerText = snapshot.Game.ServerText;
-            _viewModel.GameRegionText = snapshot.Game.RegionText;
-            _viewModel.GamePingText = snapshot.Game.PingText;
-            _viewModel.GamePingForeground = new SolidColorBrush(Color.FromRgb(0x80, 0x80, 0x80));
+            _viewModel.ApplyGameNotRunning(BuildGameStatusText(LocalizationManager.GameNotRunning));
             
             // Сбрасываем сохраненные IP
             _lastLobbyIp = null;
@@ -1217,17 +1173,10 @@ namespace AWSServerSelector
 
         private string BuildGameStatusText(string baseStatus)
         {
-            return $"{baseStatus} ({GetNpcapStatusText()})";
-        }
-
-        private string GetNpcapStatusText()
-        {
-            return _npcapRuntimeStatus switch
-            {
-                NpcapRuntimeStatus.Working => "Npcap: OK",
-                NpcapRuntimeStatus.NotWorking => "Npcap: unavailable",
-                _ => "Npcap: unknown"
-            };
+            return _connectionStatusTextService.BuildMatchStatusText(
+                baseStatus,
+                _npcapRuntimeStatus == NpcapRuntimeStatus.Working,
+                _npcapRuntimeStatus == NpcapRuntimeStatus.NotWorking);
         }
 
         #endregion
@@ -1272,14 +1221,8 @@ namespace AWSServerSelector
 
             Debug.WriteLine($"🏓 Запуск DispatcherTimer пинга к {_currentGameServerIp} (строго 1 раз/сек)");
 
-            // Создаём отдельный Ping объект для фонового мониторинга
-            _backgroundPinger = new Ping();
-
             // Создаём DispatcherTimer (работает в UI потоке, гарантирует синхронность)
-            _pingTimer = new DispatcherTimer 
-            { 
-                Interval = TimeSpan.FromSeconds(_monitoringOptions.ConnectionGamePingIntervalSeconds)
-            };
+            _pingTimer = _dispatcherTimerFactory.Create(TimeSpan.FromSeconds(_monitoringOptions.ConnectionGamePingIntervalSeconds));
             _pingTimer.Tick += async (_, __) => await UpdatePingAsync();
             _pingTimer.Start();
             
@@ -1299,7 +1242,7 @@ namespace AWSServerSelector
             {
                 Debug.WriteLine($"🔍 Reverse DNS lookup для {ipAddress}...");
                 
-                var hostEntry = await Dns.GetHostEntryAsync(ipAddress);
+                var hostEntry = await _networkProbeService.GetHostEntryAsync(ipAddress);
                 var hostname = hostEntry.HostName;
                 
                 Debug.WriteLine($"   Hostname: {hostname}");
@@ -1354,13 +1297,6 @@ namespace AWSServerSelector
             _pingTimer.Stop();
             _pingTimer = null;
             
-            // Освобождаем ресурсы
-            if (_backgroundPinger != null)
-            {
-                _backgroundPinger.Dispose();
-                _backgroundPinger = null;
-            }
-            
             _currentGameServerIp = null;
             _currentGameServerPort = 0;
             
@@ -1373,7 +1309,7 @@ namespace AWSServerSelector
         /// </summary>
         private async Task UpdatePingAsync()
         {
-            if (string.IsNullOrEmpty(_currentGameServerIp) || _backgroundPinger == null)
+            if (string.IsNullOrEmpty(_currentGameServerIp))
             {
                 Debug.WriteLine("⚠️ UpdatePingAsync: пингер не инициализирован или IP пуст");
                 return;
@@ -1386,16 +1322,14 @@ namespace AWSServerSelector
                 Debug.WriteLine($"🏓 Попытка пинга к {_currentGameServerIp}...");
                 
                 // Простой ICMP ping к GameLift хосту (как на главной странице)
-                var reply = await _backgroundPinger.SendPingAsync(_currentGameServerIp, _monitoringOptions.ConnectionPingTimeoutMs);
-                
-                if (reply.Status == IPStatus.Success)
+                ping = await _networkProbeService.PingAsync(_currentGameServerIp, _monitoringOptions.ConnectionPingTimeoutMs);
+                if (ping >= 0)
                 {
-                    ping = reply.RoundtripTime;
                     Debug.WriteLine($"✅ Пинг успешен: {ping}ms");
                 }
                 else
                 {
-                    Debug.WriteLine($"❌ Хост {_currentGameServerIp} не отвечает: {reply.Status}");
+                    Debug.WriteLine($"❌ Хост {_currentGameServerIp} не отвечает");
                 }
             }
             catch (Exception ex)
