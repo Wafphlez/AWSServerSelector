@@ -21,8 +21,36 @@
                         BorderThickness="1"
                         MinWidth="{Binding ToastMinWidth, ElementName=Root}"
                         MaxWidth="{Binding ToastMaxWidth, ElementName=Root}"
+                        Opacity="0"
                         Background="#F21A232E"
                         BorderBrush="#FF2E3B49">
+                    <Border.RenderTransform>
+                        <TranslateTransform Y="12"/>
+                    </Border.RenderTransform>
+                    <Border.Triggers>
+                        <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                     From="0"
+                                                     To="1"
+                                                     Duration="0:0:0.22">
+                                        <DoubleAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                     From="12"
+                                                     To="0"
+                                                     Duration="0:0:0.22">
+                                        <DoubleAnimation.EasingFunction>
+                                            <CubicEase EasingMode="EaseOut"/>
+                                        </DoubleAnimation.EasingFunction>
+                                    </DoubleAnimation>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Border.Triggers>
                     <Border.Effect>
                         <DropShadowEffect BlurRadius="16"
                                           ShadowDepth="2"
@@ -34,6 +62,28 @@
                             <Setter Property="Background" Value="#F21A232E"/>
                             <Setter Property="BorderBrush" Value="#FF2E3B49"/>
                             <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsClosing}" Value="True">
+                                        <DataTrigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                     To="0"
+                                                                     Duration="0:0:0.24">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <QuadraticEase EasingMode="EaseIn"/>
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                    <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                     To="12"
+                                                                     Duration="0:0:0.24">
+                                                        <DoubleAnimation.EasingFunction>
+                                                            <QuadraticEase EasingMode="EaseIn"/>
+                                                        </DoubleAnimation.EasingFunction>
+                                                    </DoubleAnimation>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </DataTrigger.EnterActions>
+                                    </DataTrigger>
                                 <DataTrigger Binding="{Binding Type}" Value="{x:Static models:NotificationType.Warning}">
                                     <Setter Property="Background" Value="#F2272B24"/>
                                     <Setter Property="BorderBrush" Value="#FF4B4630"/>

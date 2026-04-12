@@ -8,6 +8,8 @@ namespace AWSServerSelector.Services;
 public sealed class NotificationService : INotificationService
 {
     private const int MaxNotificationsPerChannel = 3;
+    private const int EnterAnimationMs = 220;
+    private const int ExitAnimationMs = 240;
     private static readonly TimeSpan DedupWindow = TimeSpan.FromMilliseconds(500);
 
     private readonly object _sync = new();
@@ -83,10 +85,7 @@ public sealed class NotificationService : INotificationService
             return;
         }
 
-        while (notifications.Count >= MaxNotificationsPerChannel)
-        {
-            notifications.RemoveAt(0);
-        }
+        RequestOverflowCloseIfNeeded(channel, notifications);
 
         var notification = new NotificationItem
         {
@@ -98,6 +97,24 @@ public sealed class NotificationService : INotificationService
 
         notifications.Add(notification);
         ScheduleRemoval(channel, notification, durationMs);
+    }
+
+    private void RequestOverflowCloseIfNeeded(string channel, ObservableCollection<NotificationItem> notifications)
+    {
+        if (notifications.Count < MaxNotificationsPerChannel)
+        {
+            return;
+        }
+
+        var oldestActive = notifications.FirstOrDefault(item => !item.IsClosing);
+        if (oldestActive != null)
+        {
+            BeginClosing(channel, oldestActive, ExitAnimationMs);
+            return;
+        }
+
+        // Fallback: если все элементы уже закрываются, удаляем самый старый.
+        notifications.RemoveAt(0);
     }
 
     private ObservableCollection<NotificationItem> GetOrCreateChannelCollection(string channel)
@@ -119,6 +136,28 @@ public sealed class NotificationService : INotificationService
     private void ScheduleRemoval(string channel, NotificationItem notification, int durationMs)
     {
         var timer = _dispatcherTimerFactory.Create(TimeSpan.FromMilliseconds(durationMs));
+        EventHandler? onTick = null;
+        onTick = (_, _) =>
+        {
+            timer.Stop();
+            timer.Tick -= onTick;
+            BeginClosing(channel, notification, ExitAnimationMs);
+        };
+
+        timer.Tick += onTick;
+        timer.Start();
+    }
+
+    private void BeginClosing(string channel, NotificationItem notification, int removeDelayMs)
+    {
+        if (notification.IsClosing)
+        {
+            return;
+        }
+
+        notification.IsClosing = true;
+        var removalDelay = Math.Max(removeDelayMs, EnterAnimationMs);
+        var timer = _dispatcherTimerFactory.Create(TimeSpan.FromMilliseconds(removalDelay));
         EventHandler? onTick = null;
         onTick = (_, _) =>
         {
