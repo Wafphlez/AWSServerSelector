@@ -107,9 +107,45 @@ namespace AWSServerSelector
 
         public GitHubAsset? GetDownloadAsset(GitHubReleaseInfo release)
         {
-            // Ищем zip файл для скачивания
-            return release.Assets.Find(asset => 
-                asset.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase));
+            if (release.Assets == null || release.Assets.Count == 0)
+            {
+                return null;
+            }
+
+            // Предпочитаем конечные установочные/исполняемые артефакты,
+            // но оставляем совместимость с архивами.
+            var preferredExtensions = new[]
+            {
+                ".exe",
+                ".msi",
+                ".msix",
+                ".msixbundle",
+                ".zip",
+                ".7z"
+            };
+
+            foreach (var extension in preferredExtensions)
+            {
+                var matchedAsset = release.Assets.FirstOrDefault(asset =>
+                    !string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl) &&
+                    asset.Name.EndsWith(extension, StringComparison.OrdinalIgnoreCase));
+
+                if (matchedAsset != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Selected download asset: '{matchedAsset.Name}'");
+                    return matchedAsset;
+                }
+            }
+
+            // Фолбэк: берём первый ассет с валидной ссылкой, даже если расширение нетипичное.
+            var fallbackAsset = release.Assets.FirstOrDefault(asset =>
+                !string.IsNullOrWhiteSpace(asset.BrowserDownloadUrl));
+            if (fallbackAsset != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"Fallback download asset: '{fallbackAsset.Name}'");
+            }
+
+            return fallbackAsset;
         }
 
         public void Dispose()

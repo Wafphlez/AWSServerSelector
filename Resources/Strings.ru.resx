@@ -229,6 +229,9 @@
   <data name="UpdateAvailable" xml:space="preserve">
     <value>Доступно обновление</value>
   </data>
+  <data name="UpdateAvailableFrom" xml:space="preserve">
+    <value>Доступно обновление от {0}</value>
+  </data>
   <data name="DownloadUpdate" xml:space="preserve">
     <value>Скачать обновление</value>
   </data>

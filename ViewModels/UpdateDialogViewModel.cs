@@ -86,7 +86,15 @@ public partial class UpdateDialogViewModel : ObservableObject
     private void SetUpdateInfo(GitHubReleaseInfo release, GitHubAsset downloadAsset)
     {
         var cleanVersion = release.TagName?.TrimStart('v') ?? "unknown";
-        UpdateTitle = $"{LocalizationManager.GetString("UpdateAvailable")} {cleanVersion}";
+        var updateAvailableText = LocalizationManager.GetString("UpdateAvailable");
+        UpdateTitle = $"{updateAvailableText} {cleanVersion}";
+        var publishedDate = release.PublishedAt == default
+            ? string.Empty
+            : release.PublishedAt.ToLocalTime().ToString("dd.MM.yyyy");
+        var updateAvailableFromText = LocalizationManager.GetString("UpdateAvailableFrom");
+        StatusText = !string.IsNullOrWhiteSpace(publishedDate)
+            ? string.Format(updateAvailableFromText, publishedDate)
+            : $"{updateAvailableText}: {cleanVersion}";
         UpdateDescription = release.Body.Length > 200 ? release.Body[..200] + "..." : release.Body;
         UpdateSize = $"{LocalizationManager.GetString("UpdateSize")} {FormatFileSize(downloadAsset.Size)}";
         _downloadUrl = downloadAsset.BrowserDownloadUrl;

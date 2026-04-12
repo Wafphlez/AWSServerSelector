@@ -229,6 +229,9 @@
   <data name="UpdateAvailable" xml:space="preserve">
     <value>Update Available</value>
   </data>
+  <data name="UpdateAvailableFrom" xml:space="preserve">
+    <value>Update available from {0}</value>
+  </data>
   <data name="DownloadUpdate" xml:space="preserve">
     <value>Download Update</value>
   </data>
