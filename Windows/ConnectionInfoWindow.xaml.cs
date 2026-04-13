@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -97,6 +98,47 @@ namespace AWSServerSelector
         private void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        public TrayStatusSnapshot GetTrayStatusSnapshot()
+        {
+            var matchPing = NormalizeTrayValue(_viewModel.GamePingText);
+            var region = ExtractRegionFromServerAddress(_currentGameServerIp);
+            return new TrayStatusSnapshot(matchPing, region);
+        }
+
+        private static string NormalizeTrayValue(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "N/A";
+            }
+
+            var normalized = value.Trim();
+            if (string.Equals(normalized, LocalizationManager.NotMeasured, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(normalized, LocalizationManager.NotDetermined, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(normalized, LocalizationManager.Initializing, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(normalized, LocalizationManager.Measuring, StringComparison.OrdinalIgnoreCase))
+            {
+                return "N/A";
+            }
+
+            return normalized;
+        }
+
+        private static string ExtractRegionFromServerAddress(string? serverAddress)
+        {
+            if (string.IsNullOrWhiteSpace(serverAddress))
+            {
+                return "N/A";
+            }
+
+            var match = Regex.Match(
+                serverAddress.Trim(),
+                @"gamelift\.([a-z]{2}-[a-z0-9-]+-\d+)\.amazonaws\.com",
+                RegexOptions.IgnoreCase);
+
+            return match.Success ? match.Groups[1].Value : "N/A";
         }
 
         #endregion

@@ -39,6 +39,9 @@ namespace AWSServerSelector
             var mainWindow = Services.GetRequiredService<MainWindow>();
             MainWindow = mainWindow;
             mainWindow.Show();
+
+            var trayIconService = Services.GetRequiredService<ITrayIconService>();
+            trayIconService.Initialize(mainWindow);
         }
 
         private static IServiceProvider ConfigureServices()
@@ -117,6 +120,7 @@ namespace AWSServerSelector
             services.AddSingleton<IConnectionStatusTextService, ConnectionStatusTextService>();
             services.AddSingleton<IHostsContentBuilder, HostsContentBuilder>();
             services.AddSingleton<ILocalizationService, LocalizationService>();
+            services.AddSingleton<ITrayIconService, TrayIconService>();
 
             services.AddSingleton<MainWindow>();
             services.AddTransient<SettingsDialogViewModel>();
@@ -204,6 +208,23 @@ namespace AWSServerSelector
                     }
                 }
             }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            if (Services is not null)
+            {
+                try
+                {
+                    Services.GetRequiredService<ITrayIconService>().Dispose();
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("Failed to dispose tray service on application exit.", ex);
+                }
+            }
+
+            base.OnExit(e);
         }
     }
 

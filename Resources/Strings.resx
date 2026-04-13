@@ -355,6 +355,36 @@
   <data name="HostsReverted" xml:space="preserve">
     <value>AWS hosts entries were cleared.</value>
   </data>
+  <data name="TrayShow" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="TrayHide" xml:space="preserve">
+    <value>Hide</value>
+  </data>
+  <data name="TrayStatusFormat" xml:space="preserve">
+    <value>Status: Match: {0} | Region: {1}</value>
+  </data>
+  <data name="TrayTooltipFormat" xml:space="preserve">
+    <value>Ping: {0} {1}</value>
+  </data>
+  <data name="TrayRefreshPing" xml:space="preserve">
+    <value>Refresh Ping</value>
+  </data>
+  <data name="TrayApply" xml:space="preserve">
+    <value>Apply Selection</value>
+  </data>
+  <data name="TrayReset" xml:space="preserve">
+    <value>Reset to Default</value>
+  </data>
+  <data name="TrayConnectionInfo" xml:space="preserve">
+    <value>Connection Info</value>
+  </data>
+  <data name="TrayExit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="TrayRunningHint" xml:space="preserve">
+    <value>Ping by Daylight is running in the tray.</value>
+  </data>
   <data name="NpcapStatusOk" xml:space="preserve">
     <value>Npcap: OK</value>
   </data>

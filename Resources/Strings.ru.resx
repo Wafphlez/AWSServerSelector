@@ -355,6 +355,36 @@
   <data name="HostsReverted" xml:space="preserve">
     <value>Записи AWS в hosts очищены.</value>
   </data>
+  <data name="TrayShow" xml:space="preserve">
+    <value>Показать</value>
+  </data>
+  <data name="TrayHide" xml:space="preserve">
+    <value>Скрыть</value>
+  </data>
+  <data name="TrayStatusFormat" xml:space="preserve">
+    <value>Статус: Матч: {0} | Регион: {1}</value>
+  </data>
+  <data name="TrayTooltipFormat" xml:space="preserve">
+    <value>Ping: {0} {1}</value>
+  </data>
+  <data name="TrayRefreshPing" xml:space="preserve">
+    <value>Обновить пинг</value>
+  </data>
+  <data name="TrayApply" xml:space="preserve">
+    <value>Применить выбор</value>
+  </data>
+  <data name="TrayReset" xml:space="preserve">
+    <value>Сбросить по умолчанию</value>
+  </data>
+  <data name="TrayConnectionInfo" xml:space="preserve">
+    <value>Информация о подключении</value>
+  </data>
+  <data name="TrayExit" xml:space="preserve">
+    <value>Выход</value>
+  </data>
+  <data name="TrayRunningHint" xml:space="preserve">
+    <value>Ping by Daylight работает в трее.</value>
+  </data>
   <data name="NpcapStatusOk" xml:space="preserve">
     <value>Npcap: работает</value>
   </data>

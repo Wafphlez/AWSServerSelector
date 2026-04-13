@@ -27,7 +27,7 @@ using Microsoft.Extensions.Options;
 namespace AWSServerSelector
 {
     [SupportedOSPlatform("windows")]
-    public partial class MainWindow : Window, INotifyPropertyChanged
+    public partial class MainWindow : Window, INotifyPropertyChanged, ITrayHost
     {
         #region Constants and Fields
         
@@ -51,6 +51,8 @@ namespace AWSServerSelector
         private readonly ILocalizationService _localizationService;
         private readonly AppLinksOptions _appLinksOptions;
         private readonly MonitoringOptions _monitoringOptions;
+        private bool _allowWindowClose;
+        private bool _trayHintShown;
         
         private const string MainNotificationsChannel = "main";
 
@@ -697,6 +699,117 @@ namespace AWSServerSelector
             _pingTimer?.Stop();
             LocalizationManager.LanguageChanged -= OnLanguageChanged;
             base.OnClosed(e);
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            if (!_allowWindowClose)
+            {
+                e.Cancel = true;
+                HideToTray();
+                return;
+            }
+
+            base.OnClosing(e);
+        }
+
+        #endregion
+
+        #region Tray Integration
+
+        public void ShowFromTray()
+        {
+            if (!IsVisible)
+            {
+                Show();
+            }
+
+            if (WindowState == WindowState.Minimized)
+            {
+                WindowState = WindowState.Normal;
+            }
+
+            Activate();
+        }
+
+        public void HideToTray()
+        {
+            Hide();
+            if (!_trayHintShown)
+            {
+                _trayHintShown = true;
+                _notificationService.ShowSuccess(
+                    MainNotificationsChannel,
+                    _localizationService.GetString("TrayRunningHint"));
+            }
+
+            RefreshTrayStatusIfAvailable();
+        }
+
+        public void ToggleVisibilityFromTray()
+        {
+            if (IsVisible)
+            {
+                HideToTray();
+                return;
+            }
+
+            ShowFromTray();
+        }
+
+        public void ApplySelectionFromTray()
+        {
+            ApplyButton_Click(this, new RoutedEventArgs());
+        }
+
+        public void ResetSelectionFromTray()
+        {
+            RevertButton_Click(this, new RoutedEventArgs());
+        }
+
+        public void OpenConnectionInfoFromTray()
+        {
+            if (!IsVisible)
+            {
+                ShowFromTray();
+            }
+
+            ConnectionInfo_Click(this, new RoutedEventArgs());
+        }
+
+        public async Task RefreshPingFromTrayAsync()
+        {
+            await UpdatePingResults();
+            RefreshTrayStatusIfAvailable();
+        }
+
+        public TrayStatusSnapshot GetTrayStatusSnapshot()
+        {
+            if (_connectionInfoWindow is { IsLoaded: true })
+            {
+                return _connectionInfoWindow.GetTrayStatusSnapshot();
+            }
+
+            return TrayStatusSnapshot.Unavailable;
+        }
+
+        public void ExitFromTray()
+        {
+            _allowWindowClose = true;
+            Close();
+            Application.Current.Shutdown();
+        }
+
+        private void RefreshTrayStatusIfAvailable()
+        {
+            try
+            {
+                App.Services.GetRequiredService<ITrayIconService>().RefreshStatus();
+            }
+            catch
+            {
+                // Ignore: tray service may be unavailable during shutdown.
+            }
         }
 
         #endregion
