@@ -60,7 +60,7 @@ public class ConfigurationFallbackTests
     }
 
     [Fact]
-    public void HostsService_Throws_WhenConfiguredPathMissing()
+    public void HostsService_UsesEmbeddedTemplate_WhenConfiguredPathMissing()
     {
         var options = Options.Create(new HostsOptions
         {
@@ -68,11 +68,13 @@ public class ConfigurationFallbackTests
         });
 
         var service = new HostsService(options);
-        Assert.Throws<FileNotFoundException>(() => service.ReadDefaultTemplate());
+        var template = service.ReadDefaultTemplate();
+
+        Assert.Contains("# localhost name resolution is handled within DNS itself.", template);
     }
 
     [Fact]
-    public void HostsService_ReadsTemplateFromConfiguredPath_WhenFileExists()
+    public void HostsService_IgnoresConfiguredPathAndStillUsesEmbeddedTemplate()
     {
         var tempFile = Path.Combine(Path.GetTempPath(), $"hosts-template-{Guid.NewGuid():N}.txt");
         try
@@ -87,7 +89,8 @@ public class ConfigurationFallbackTests
             var service = new HostsService(options);
             var template = service.ReadDefaultTemplate();
 
-            Assert.Equal("# custom hosts template", template);
+            Assert.DoesNotContain("# custom hosts template", template);
+            Assert.Contains("# Copyright (c) 1993-2009 Microsoft Corp.", template);
         }
         finally
         {
@@ -99,7 +102,7 @@ public class ConfigurationFallbackTests
     }
 
     [Fact]
-    public void HostsService_Throws_WhenTemplateFileIsEmpty()
+    public void HostsService_ReturnsEmbeddedTemplate_WhenConfiguredFileIsEmpty()
     {
         var tempFile = Path.Combine(Path.GetTempPath(), $"hosts-empty-{Guid.NewGuid():N}.txt");
         try
@@ -111,7 +114,9 @@ public class ConfigurationFallbackTests
             });
 
             var service = new HostsService(options);
-            Assert.Throws<InvalidOperationException>(() => service.ReadDefaultTemplate());
+            var template = service.ReadDefaultTemplate();
+
+            Assert.Contains("# localhost name resolution is handled within DNS itself.", template);
         }
         finally
         {

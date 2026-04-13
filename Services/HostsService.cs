@@ -10,14 +10,13 @@ namespace AWSServerSelector.Services;
 
 public sealed class HostsService : IHostsFileService
 {
-    private readonly HostsOptions _hostsOptions;
     private static string HostsPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.System),
         "drivers\\etc\\hosts");
 
     public HostsService(IOptions<HostsOptions> hostsOptions)
     {
-        _hostsOptions = hostsOptions.Value;
+        _ = hostsOptions.Value;
     }
 
     public string Read()
@@ -40,27 +39,12 @@ public sealed class HostsService : IHostsFileService
 
     public string ReadDefaultTemplate()
     {
-        var configuredPath = _hostsOptions.DefaultHostsTemplatePath;
-        if (string.IsNullOrWhiteSpace(configuredPath))
-        {
-            throw new InvalidOperationException("Hosts.DefaultHostsTemplatePath must not be empty.");
-        }
-
-        var fullPath = Path.IsPathRooted(configuredPath)
-            ? configuredPath
-            : Path.Combine(AppContext.BaseDirectory, configuredPath);
-
-        if (!File.Exists(fullPath))
-        {
-            throw new FileNotFoundException($"Default hosts template file was not found: {fullPath}", fullPath);
-        }
-
         try
         {
-            var content = File.ReadAllText(fullPath);
+            var content = EmbeddedResourceReader.ReadRequiredText("Config/default-hosts.txt");
             if (string.IsNullOrWhiteSpace(content))
             {
-                throw new InvalidOperationException($"Default hosts template file is empty: {fullPath}");
+                throw new InvalidOperationException("Embedded default hosts template is empty.");
             }
 
             return content;

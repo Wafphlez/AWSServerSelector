@@ -138,11 +138,22 @@ namespace AWSServerSelector
 
         private static IConfiguration BuildConfiguration()
         {
-            return new ConfigurationBuilder()
-                .SetBasePath(AppContext.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: false)
-                .AddJsonFile("Config/regions.json", optional: false, reloadOnChange: false)
-                .Build();
+            try
+            {
+                using var appSettingsStream = EmbeddedResourceReader.OpenRequired("appsettings.json");
+                using var regionsStream = EmbeddedResourceReader.OpenRequired("Config/regions.json");
+
+                return new ConfigurationBuilder()
+                    .AddJsonStream(appSettingsStream)
+                    .AddJsonStream(regionsStream)
+                    .Build();
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException(
+                    "Embedded configuration loading failed. Ensure appsettings.json and Config/regions.json are embedded.",
+                    ex);
+            }
         }
 
         private static void HandleStartupFailure(Exception ex)
