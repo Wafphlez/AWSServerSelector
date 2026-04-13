@@ -32,7 +32,7 @@ namespace AWSServerSelector
         #region Constants and Fields
         
         private static readonly string CurrentVersion =
-            typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "1.0.4";
+            typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "1.0.5";
         
         private readonly IReadOnlyDictionary<string, RegionDefinition> _regions;
 
